@@ -690,6 +690,18 @@
   border-color: var(--cyan-accent);
 }
 
+.category-edit-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+  width: 100%;
+  min-width: 0;
+}
+
+.category-edit-form .edit-actions {
+  min-height: 16px;
+}
+
 /* Bookmark edit form */
 .bookmark-edit-form {
   display: flex;
