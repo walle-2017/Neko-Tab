@@ -240,7 +240,9 @@ export function Bookmarks({
               )}
             </div>
             
-            <div className={`bookmarks-list${cat.bookmarks.length > 4 ? ' bookmarks-list-scrollable' : ''}`}>
+            <div
+              className={`bookmarks-list bookmarks-list-fixed${cat.bookmarks.length > 4 ? ' bookmarks-list-scrollable' : ''}${editing.categoryId === cat.id && (editing.type === 'bookmark' || editing.type === 'new-bookmark') ? ' bookmarks-list-editing' : ''}`}
+            >
               {cat.bookmarks.map(bookmark => (
                 <div 
                   key={bookmark.id} 
