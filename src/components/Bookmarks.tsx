@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
-import { Plus, Pencil, Trash2, X, Check, ChevronDown, ChevronRight } from 'lucide-react'
+import { Plus, Pencil, Trash2, X, Check, ChevronDown, ChevronRight, ChevronUp } from 'lucide-react'
 import type { BookmarkCategory, Bookmark } from '../types'
 import { recordTabUsage } from '../utils/tabUsage'
 import { isSafeUrl } from '../utils/browser'
@@ -214,16 +214,27 @@ export function Bookmarks({
         </button>
       </div>
 
-      <div 
-        ref={categoriesGridRef}
-        className={`categories-grid${scrollHintClass(categoryScrollHint)} ${!showBookmarks ? 'no-transition' : ''}`}
-        onScroll={updateCategoryScrollHint}
-        style={{ 
-          opacity: showBookmarks ? 1 : 0,
-          pointerEvents: showBookmarks ? 'auto' : 'none',
-          transition: 'none'
-        }}
-      >
+      <div className="categories-scroll-shell">
+        {categoryScrollHint.up && (
+          <div className="categories-scroll-indicator categories-scroll-indicator-top" aria-hidden="true">
+            <ChevronUp size={16} />
+          </div>
+        )}
+        {categoryScrollHint.down && (
+          <div className="categories-scroll-indicator categories-scroll-indicator-bottom" aria-hidden="true">
+            <ChevronDown size={16} />
+          </div>
+        )}
+        <div 
+          ref={categoriesGridRef}
+          className={`categories-grid${scrollHintClass(categoryScrollHint)} ${!showBookmarks ? 'no-transition' : ''}`}
+          onScroll={updateCategoryScrollHint}
+          style={{ 
+            opacity: showBookmarks ? 1 : 0,
+            pointerEvents: showBookmarks ? 'auto' : 'none',
+            transition: 'none'
+          }}
+        >
         {topSites.length > 0 && (
           <div className="category-column">
             <div className="category-header">
@@ -296,10 +307,21 @@ export function Bookmarks({
               )}
             </div>
             
-            <div
-              className={`bookmarks-list bookmarks-list-fixed${cat.bookmarks.length > 4 ? ` bookmarks-list-scrollable${scrollHintClass(bookmarkScrollHints[cat.id] ?? { up: false, down: true })}` : ''}${editing.categoryId === cat.id && (editing.type === 'bookmark' || editing.type === 'new-bookmark') ? ' bookmarks-list-editing' : ''}`}
-              onScroll={cat.bookmarks.length > 4 ? (event) => handleBookmarkScroll(cat.id, event) : undefined}
-            >
+            <div className="bookmark-list-shell">
+              {cat.bookmarks.length > 4 && (bookmarkScrollHints[cat.id]?.up ?? false) && (
+                <div className="bookmark-scroll-indicator bookmark-scroll-indicator-top" aria-hidden="true">
+                  <ChevronUp size={12} />
+                </div>
+              )}
+              {cat.bookmarks.length > 4 && (bookmarkScrollHints[cat.id]?.down ?? true) && (
+                <div className="bookmark-scroll-indicator bookmark-scroll-indicator-bottom" aria-hidden="true">
+                  <ChevronDown size={12} />
+                </div>
+              )}
+              <div
+                className={`bookmarks-list bookmarks-list-fixed${cat.bookmarks.length > 4 ? ` bookmarks-list-scrollable${scrollHintClass(bookmarkScrollHints[cat.id] ?? { up: false, down: true })}` : ''}${editing.categoryId === cat.id && (editing.type === 'bookmark' || editing.type === 'new-bookmark') ? ' bookmarks-list-editing' : ''}`}
+                onScroll={cat.bookmarks.length > 4 ? (event) => handleBookmarkScroll(cat.id, event) : undefined}
+              >
               {cat.bookmarks.map(bookmark => (
                 <div 
                   key={bookmark.id} 
@@ -393,9 +415,11 @@ export function Bookmarks({
                   </div>
                 </div>
               )}
+              </div>
             </div>
           </div>
         ))}
+        </div>
       </div>
     </div>
   )
