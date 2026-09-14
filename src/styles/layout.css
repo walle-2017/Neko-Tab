@@ -27,6 +27,9 @@
   max-width: 1400px;
   margin: var(--spacing-xl) auto 0;
   align-items: flex-start;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
 }
 
 /* ASCII Column */
@@ -45,6 +48,7 @@
   flex: 1;
   max-width: 900px;
   min-width: 0;
+  height: 100%;
   overflow: hidden;
   display: flex;
   flex-direction: column;
@@ -212,6 +216,7 @@
   width: 100%;
   max-width: 600px;
   margin: 0 auto;
+  flex: 0 0 auto;
   transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
   will-change: transform, max-width;
 }
@@ -331,9 +336,11 @@
   padding: 0;
   width: 100%;
   position: relative;
-  overflow-y: auto;
+  overflow: hidden;
   min-height: 0;
   flex: 1;
+  display: flex;
+  flex-direction: column;
 }
 
 .bookmarks-header {
@@ -341,6 +348,7 @@
   justify-content: space-between;
   align-items: center;
   margin-bottom: var(--spacing-lg);
+  flex: 0 0 auto;
 }
 
 .bookmarks-toggle {
@@ -383,6 +391,28 @@
   flex-wrap: wrap;
   justify-content: flex-start;
   align-items: flex-start;
+  align-content: flex-start;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-right: 6px;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border, rgba(255, 255, 255, 0.25)) transparent;
+}
+
+.categories-grid::-webkit-scrollbar {
+  width: 6px;
+}
+
+.categories-grid::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.categories-grid::-webkit-scrollbar-thumb {
+  background: var(--border, rgba(255, 255, 255, 0.25));
+  border-radius: 3px;
 }
 
 .category-column {
