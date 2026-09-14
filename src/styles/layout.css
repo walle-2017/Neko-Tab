@@ -478,9 +478,13 @@
   gap: 1px;
 }
 
-.bookmarks-list-scrollable {
+.bookmarks-list-fixed {
   /* Four bookmark rows: (21px line-height + 2px vertical padding) * 4 + 3px gaps */
-  max-height: 95px;
+  height: 95px;
+  overflow: hidden;
+}
+
+.bookmarks-list-scrollable {
   overflow-y: scroll;
   overflow-x: hidden;
   padding-right: 6px;
@@ -488,6 +492,10 @@
   scrollbar-color: var(--border, rgba(255, 255, 255, 0.25)) transparent;
   scrollbar-gutter: stable;
   overscroll-behavior: contain;
+}
+
+.bookmarks-list-editing {
+  overflow-y: auto;
 }
 
 .bookmarks-list-scrollable::-webkit-scrollbar {
