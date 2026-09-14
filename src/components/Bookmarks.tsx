@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
-import { Plus, Pencil, Trash2, X, Check, ChevronDown, ChevronRight } from 'lucide-react'
+import { Plus, Pencil, Trash2, X, Check, ChevronDown, ChevronRight, ChevronUp } from 'lucide-react'
 import type { BookmarkCategory, Bookmark } from '../types'
 import { recordTabUsage } from '../utils/tabUsage'
 import { isSafeUrl } from '../utils/browser'
@@ -25,6 +25,11 @@ interface EditingState {
   url?: string
 }
 
+interface ScrollHintState {
+  up: boolean
+  down: boolean
+}
+
 export function Bookmarks({
   categories,
   onAddCategory,
@@ -47,6 +52,9 @@ export function Bookmarks({
     }
   })
   const inputRef = useRef<HTMLInputElement>(null)
+  const categoriesGridRef = useRef<HTMLDivElement>(null)
+  const [categoryScrollHint, setCategoryScrollHint] = useState<ScrollHintState>({ up: false, down: false })
+  const [bookmarkScrollHints, setBookmarkScrollHints] = useState<Record<string, ScrollHintState>>({})
 
   useEffect(() => {
     if (typeof chrome !== 'undefined' && chrome.topSites) {
@@ -71,14 +79,51 @@ export function Bookmarks({
     }
   }, [editing.type, editing.categoryId, editing.bookmarkId])
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Escape') {
-      setEditing({ type: null })
-    }
-    if (e.key === 'Enter') {
-      handleSave()
+  const getScrollHintState = (element: HTMLElement): ScrollHintState => {
+    const maxScrollTop = Math.max(0, element.scrollHeight - element.clientHeight)
+    return {
+      up: element.scrollTop > 1,
+      down: element.scrollTop < maxScrollTop - 1,
     }
   }
+
+  const updateCategoryScrollHint = () => {
+    const element = categoriesGridRef.current
+    if (!element) return
+
+    const next = getScrollHintState(element)
+    setCategoryScrollHint(prev =>
+      prev.up === next.up && prev.down === next.down ? prev : next
+    )
+  }
+
+  const handleBookmarkScroll = (categoryId: string, event: React.UIEvent<HTMLDivElement>) => {
+    const next = getScrollHintState(event.currentTarget)
+    setBookmarkScrollHints(prev => {
+      const current = prev[categoryId]
+      if (current?.up === next.up && current?.down === next.down) return prev
+      return { ...prev, [categoryId]: next }
+    })
+  }
+
+  const scrollHintClass = (hint: ScrollHintState) =>
+    `${hint.up ? ' scroll-hint-top' : ''}${hint.down ? ' scroll-hint-bottom' : ''}`
+
+  useEffect(() => {
+    const element = categoriesGridRef.current
+    if (!element) return
+
+    const frame = requestAnimationFrame(updateCategoryScrollHint)
+    const resizeObserver = new ResizeObserver(updateCategoryScrollHint)
+    resizeObserver.observe(element)
+    window.addEventListener('resize', updateCategoryScrollHint)
+
+    return () => {
+      cancelAnimationFrame(frame)
+      resizeObserver.disconnect()
+      window.removeEventListener('resize', updateCategoryScrollHint)
+    }
+  }, [categories, topSites.length, showBookmarks])
 
   const handleSave = () => {
     if (!editing.value?.trim()) {
@@ -107,6 +152,21 @@ export function Bookmarks({
         break
     }
     setEditing({ type: null })
+  }
+
+  const handleCancelEdit = () => {
+    setEditing({ type: null })
+  }
+
+  const handleEditModeToggle = () => {
+    if (isEditMode) {
+      // Closing the overall edit mode explicitly cancels any unfinished nested edit.
+      handleCancelEdit()
+      setIsEditMode(false)
+      return
+    }
+
+    setIsEditMode(true)
   }
 
   const startEditCategory = (e: React.MouseEvent, cat: BookmarkCategory) => {
@@ -140,6 +200,33 @@ export function Bookmarks({
     void recordTabUsage()
   }
 
+  useEffect(() => {
+    if (!isEditMode) return
+
+    const handleEditorKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape' && event.key !== 'Enter') return
+
+      // Consume exactly one edit layer per key press.
+      event.preventDefault()
+      event.stopPropagation()
+
+      if (editing.type) {
+        if (event.key === 'Escape') {
+          handleCancelEdit()
+        } else {
+          handleSave()
+        }
+        return
+      }
+
+      // No nested edit is active: this key press exits the overall edit mode.
+      setIsEditMode(false)
+    }
+
+    window.addEventListener('keydown', handleEditorKeyDown, true)
+    return () => window.removeEventListener('keydown', handleEditorKeyDown, true)
+  }, [isEditMode, editing])
+
   return (
     <div className="bookmarks-container">
       <div className="bookmarks-header">
@@ -153,21 +240,27 @@ export function Bookmarks({
         <button 
           className="action-btn-mini"
           style={{ opacity: isEditMode ? 1 : 0.5 }}
-          onClick={() => setIsEditMode(!isEditMode)}
+          onClick={handleEditModeToggle}
           title={isEditMode ? "Done editing" : "Edit bookmarks"}
         >
           {isEditMode ? <Check size={14} /> : <Pencil size={14} />}
         </button>
       </div>
 
-      <div 
-        className={`categories-grid ${!showBookmarks ? 'no-transition' : ''}`}
-        style={{ 
-          opacity: showBookmarks ? 1 : 0,
-          pointerEvents: showBookmarks ? 'auto' : 'none',
-          transition: 'none'
-        }}
-      >
+      <div className="categories-scroll-shell">
+        <div className="categories-scroll-indicator-row categories-scroll-indicator-row-top" aria-hidden="true">
+          {categoryScrollHint.up && <ChevronUp size={16} />}
+        </div>
+        <div 
+          ref={categoriesGridRef}
+          className={`categories-grid${scrollHintClass(categoryScrollHint)} ${!showBookmarks ? 'no-transition' : ''}`}
+          onScroll={updateCategoryScrollHint}
+          style={{ 
+            opacity: showBookmarks ? 1 : 0,
+            pointerEvents: showBookmarks ? 'auto' : 'none',
+            transition: 'none'
+          }}
+        >
         {topSites.length > 0 && (
           <div className="category-column">
             <div className="category-header">
@@ -200,17 +293,25 @@ export function Bookmarks({
           >
             <div className="category-header">
               {editing.type === 'category' && editing.categoryId === cat.id ? (
-                <input
-                  ref={inputRef}
-                  type="text"
-                  className="inline-input"
-                  value={editing.value}
-                  onChange={e => setEditing({ ...editing, value: e.target.value })}
-                  onKeyDown={handleKeyDown}
-                  onBlur={handleSave}
-                />
+                <div className="category-edit-form">
+                  <input
+                    ref={inputRef}
+                    type="text"
+                    className="inline-input"
+                    value={editing.value}
+                    onChange={e => setEditing({ ...editing, value: e.target.value })}
+                  />
+                  <div className="edit-actions">
+                    <button className="action-btn-mini" onClick={handleSave} title="Save category name">
+                      <Check size={12} />
+                    </button>
+                    <button className="action-btn-mini" onClick={handleCancelEdit} title="Cancel category edit">
+                      <X size={12} />
+                    </button>
+                  </div>
+                </div>
               ) : (
-                <span className="category-name">{cat.name}</span>
+                <span className="category-name category-name-user" title={cat.name}>{cat.name}</span>
               )}
               
               {isEditMode && editing.type !== 'category' && (
@@ -240,8 +341,12 @@ export function Bookmarks({
               )}
             </div>
             
-            <div className="bookmarks-list">
-              {cat.bookmarks.slice(0, 4).map(bookmark => (
+            <div className={`bookmark-list-shell${cat.bookmarks.length > 4 ? ' bookmark-list-shell-scrollable' : ''}`}>
+              <div
+                className={`bookmarks-list bookmarks-list-fixed${cat.bookmarks.length > 4 ? ` bookmarks-list-scrollable${scrollHintClass(bookmarkScrollHints[cat.id] ?? { up: false, down: true })}` : ''}${editing.categoryId === cat.id && (editing.type === 'bookmark' || editing.type === 'new-bookmark') ? ' bookmarks-list-editing' : ''}`}
+                onScroll={cat.bookmarks.length > 4 ? (event) => handleBookmarkScroll(cat.id, event) : undefined}
+              >
+              {cat.bookmarks.map(bookmark => (
                 <div 
                   key={bookmark.id} 
                   className="bookmark-item"
@@ -255,7 +360,6 @@ export function Bookmarks({
                         placeholder="Title"
                         value={editing.value}
                         onChange={e => setEditing({ ...editing, value: e.target.value })}
-                        onKeyDown={handleKeyDown}
                       />
                       <input
                         type="text"
@@ -263,13 +367,12 @@ export function Bookmarks({
                         placeholder="URL"
                         value={editing.url}
                         onChange={e => setEditing({ ...editing, url: e.target.value })}
-                        onKeyDown={handleKeyDown}
                       />
                       <div className="edit-actions">
                         <button className="action-btn-mini" onClick={handleSave}>
                           <Check size={12} />
                         </button>
-                        <button className="action-btn-mini" onClick={() => setEditing({ type: null })}>
+                        <button className="action-btn-mini" onClick={handleCancelEdit}>
                           <X size={12} />
                         </button>
                       </div>
@@ -282,7 +385,7 @@ export function Bookmarks({
                         onClick={handleNavigate}
                       >
                         <SiteIcon url={bookmark.url} title={bookmark.title} />
-                        {bookmark.title}
+                        <span className="bookmark-title" title={bookmark.title}>{bookmark.title}</span>
                       </a>
                       {isEditMode && (
                         <div className="bookmark-actions">
@@ -314,7 +417,6 @@ export function Bookmarks({
                     placeholder="Title"
                     value={editing.value}
                     onChange={e => setEditing({ ...editing, value: e.target.value })}
-                    onKeyDown={handleKeyDown}
                   />
                   <input
                     type="text"
@@ -322,21 +424,35 @@ export function Bookmarks({
                     placeholder="URL"
                     value={editing.url}
                     onChange={e => setEditing({ ...editing, url: e.target.value })}
-                    onKeyDown={handleKeyDown}
                   />
                   <div className="edit-actions">
                     <button className="action-btn-mini" onClick={handleSave}>
                       <Check size={12} />
                     </button>
-                    <button className="action-btn-mini" onClick={() => setEditing({ type: null })}>
+                    <button className="action-btn-mini" onClick={handleCancelEdit}>
                       <X size={12} />
                     </button>
+                  </div>
+                </div>
+              )}
+              </div>
+              {cat.bookmarks.length > 4 && (
+                <div className="bookmark-scroll-indicator-gutter" aria-hidden="true">
+                  <div className="bookmark-scroll-indicator">
+                    {(bookmarkScrollHints[cat.id]?.up ?? false) && <ChevronUp size={12} />}
+                  </div>
+                  <div className="bookmark-scroll-indicator">
+                    {(bookmarkScrollHints[cat.id]?.down ?? true) && <ChevronDown size={12} />}
                   </div>
                 </div>
               )}
             </div>
           </div>
         ))}
+        </div>
+        <div className="categories-scroll-indicator-row categories-scroll-indicator-row-bottom" aria-hidden="true">
+          {categoryScrollHint.down && <ChevronDown size={16} />}
+        </div>
       </div>
     </div>
   )

@@ -182,3 +182,22 @@ Zero data leaves your browser. Everything stored locally via `chrome.storage`. N
 ## License
 
 MIT
+
+---
+
+## Fork Changes
+
+This repository is a fork of [uddin-rajaul/Neko-Tab](https://github.com/uddin-rajaul/Neko-Tab). The following changes are specific to this fork and are not part of the upstream project.
+
+### 2026-09-14 — Bookmark layout and editing improvements
+
+- **Show all bookmarks in a category** — removed the previous four-item rendering limit. Categories still keep a compact four-row visible area, while additional bookmarks remain accessible by scrolling.
+- **Cleaner overflow hints** — persistent scrollbars are hidden. Overflowing bookmark lists use dedicated up/down indicators, and the overall category area has its own independent scroll-direction hints.
+- **Fixed new-tab viewport** — the clock, date, greeting, and command/search area remain fixed. When there are many bookmark categories, only the Quick Links category area scrolls instead of the entire page.
+- **Stable category layout** — category columns use a width-based grid so entering edit mode does not change the number of categories per row. Long category and bookmark names stay on one line and truncate instead of changing row height.
+- **Consistent layered editing** — category names, bookmarks, and new-bookmark forms use the same save/cancel behavior. `Enter` saves the current edit layer, `Escape` cancels it, and another `Enter`/`Escape` exits the overall edit mode.
+- **Explicit category-name controls** — category-name editing now includes check/cancel buttons and no longer auto-saves on blur.
+- **Safe edit-mode exit** — leaving overall edit mode closes unfinished edit forms and discards unsaved changes.
+
+Implementation history: [PR #1](https://github.com/walle-2017/Neko-Tab/pull/1).
+
