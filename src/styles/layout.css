@@ -266,6 +266,11 @@
   max-height: 2000px; /* Large enough to not clip content */
 }
 
+.content-section {
+  overflow: hidden;
+  max-height: none;
+}
+
 .clock-time {
   font-size: 64px;
   font-weight: 300;
@@ -521,7 +526,6 @@
   scrollbar-width: thin;
   scrollbar-color: var(--border, rgba(255, 255, 255, 0.25)) transparent;
   scrollbar-gutter: stable;
-  overscroll-behavior: contain;
 }
 
 .bookmarks-list-editing {
