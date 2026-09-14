@@ -298,7 +298,7 @@ export function Bookmarks({
                   onBlur={handleCategoryBlur}
                 />
               ) : (
-                <span className="category-name">{cat.name}</span>
+                <span className="category-name category-name-user" title={cat.name}>{cat.name}</span>
               )}
               
               {isEditMode && editing.type !== 'category' && (
@@ -374,7 +374,7 @@ export function Bookmarks({
                         onClick={handleNavigate}
                       >
                         <SiteIcon url={bookmark.url} title={bookmark.title} />
-                        {bookmark.title}
+                        <span className="bookmark-title" title={bookmark.title}>{bookmark.title}</span>
                       </a>
                       {isEditMode && (
                         <div className="bookmark-actions">
