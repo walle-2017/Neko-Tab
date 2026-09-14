@@ -53,6 +53,7 @@ export function Bookmarks({
   })
   const inputRef = useRef<HTMLInputElement>(null)
   const categoriesGridRef = useRef<HTMLDivElement>(null)
+  const cancelBlurSaveRef = useRef(false)
   const [categoryScrollHint, setCategoryScrollHint] = useState<ScrollHintState>({ up: false, down: false })
   const [bookmarkScrollHints, setBookmarkScrollHints] = useState<Record<string, ScrollHintState>>({})
 
@@ -124,6 +125,32 @@ export function Bookmarks({
       window.removeEventListener('resize', updateCategoryScrollHint)
     }
   }, [categories, topSites.length, showBookmarks])
+
+  const handleCategoryBlur = () => {
+    if (cancelBlurSaveRef.current) {
+      cancelBlurSaveRef.current = false
+      setEditing({ type: null })
+      return
+    }
+    handleSave()
+  }
+
+  const handleEditModeMouseDown = () => {
+    if (isEditMode && editing.type === 'category') {
+      cancelBlurSaveRef.current = true
+    }
+  }
+
+  const handleEditModeToggle = () => {
+    if (isEditMode) {
+      setEditing({ type: null })
+      setIsEditMode(false)
+      cancelBlurSaveRef.current = false
+      return
+    }
+
+    setIsEditMode(true)
+  }
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Escape') {
@@ -207,7 +234,8 @@ export function Bookmarks({
         <button 
           className="action-btn-mini"
           style={{ opacity: isEditMode ? 1 : 0.5 }}
-          onClick={() => setIsEditMode(!isEditMode)}
+          onMouseDown={handleEditModeMouseDown}
+          onClick={handleEditModeToggle}
           title={isEditMode ? "Done editing" : "Edit bookmarks"}
         >
           {isEditMode ? <Check size={14} /> : <Pencil size={14} />}
@@ -267,7 +295,7 @@ export function Bookmarks({
                   value={editing.value}
                   onChange={e => setEditing({ ...editing, value: e.target.value })}
                   onKeyDown={handleKeyDown}
-                  onBlur={handleSave}
+                  onBlur={handleCategoryBlur}
                 />
               ) : (
                 <span className="category-name">{cat.name}</span>
