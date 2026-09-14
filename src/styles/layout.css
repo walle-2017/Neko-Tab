@@ -479,7 +479,8 @@
 }
 
 .bookmarks-list-scrollable {
-  max-height: 75px;
+  /* Four bookmark rows: (21px line-height + 2px vertical padding) * 4 + 3px gaps */
+  max-height: 95px;
   overflow-y: scroll;
   overflow-x: hidden;
   padding-right: 6px;
