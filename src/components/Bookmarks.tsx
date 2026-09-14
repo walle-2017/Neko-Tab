@@ -241,7 +241,7 @@ export function Bookmarks({
             </div>
             
             <div className="bookmarks-list">
-              {cat.bookmarks.slice(0, 4).map(bookmark => (
+              {cat.bookmarks.map(bookmark => (
                 <div 
                   key={bookmark.id} 
                   className="bookmark-item"
