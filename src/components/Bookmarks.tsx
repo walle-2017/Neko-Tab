@@ -240,7 +240,7 @@ export function Bookmarks({
               )}
             </div>
             
-            <div className="bookmarks-list">
+            <div className={`bookmarks-list${cat.bookmarks.length > 4 ? ' bookmarks-list-scrollable' : ''}`}>
               {cat.bookmarks.map(bookmark => (
                 <div 
                   key={bookmark.id} 
