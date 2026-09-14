@@ -53,7 +53,6 @@ export function Bookmarks({
   })
   const inputRef = useRef<HTMLInputElement>(null)
   const categoriesGridRef = useRef<HTMLDivElement>(null)
-  const cancelBlurSaveRef = useRef(false)
   const [categoryScrollHint, setCategoryScrollHint] = useState<ScrollHintState>({ up: false, down: false })
   const [bookmarkScrollHints, setBookmarkScrollHints] = useState<Record<string, ScrollHintState>>({})
 
@@ -126,41 +125,6 @@ export function Bookmarks({
     }
   }, [categories, topSites.length, showBookmarks])
 
-  const handleCategoryBlur = () => {
-    if (cancelBlurSaveRef.current) {
-      cancelBlurSaveRef.current = false
-      setEditing({ type: null })
-      return
-    }
-    handleSave()
-  }
-
-  const handleEditModeMouseDown = () => {
-    if (isEditMode && editing.type === 'category') {
-      cancelBlurSaveRef.current = true
-    }
-  }
-
-  const handleEditModeToggle = () => {
-    if (isEditMode) {
-      setEditing({ type: null })
-      setIsEditMode(false)
-      cancelBlurSaveRef.current = false
-      return
-    }
-
-    setIsEditMode(true)
-  }
-
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Escape') {
-      setEditing({ type: null })
-    }
-    if (e.key === 'Enter') {
-      handleSave()
-    }
-  }
-
   const handleSave = () => {
     if (!editing.value?.trim()) {
       setEditing({ type: null })
@@ -188,6 +152,21 @@ export function Bookmarks({
         break
     }
     setEditing({ type: null })
+  }
+
+  const handleCancelEdit = () => {
+    setEditing({ type: null })
+  }
+
+  const handleEditModeToggle = () => {
+    if (isEditMode) {
+      // Closing the overall edit mode explicitly cancels any unfinished nested edit.
+      handleCancelEdit()
+      setIsEditMode(false)
+      return
+    }
+
+    setIsEditMode(true)
   }
 
   const startEditCategory = (e: React.MouseEvent, cat: BookmarkCategory) => {
@@ -221,6 +200,33 @@ export function Bookmarks({
     void recordTabUsage()
   }
 
+  useEffect(() => {
+    if (!isEditMode) return
+
+    const handleEditorKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape' && event.key !== 'Enter') return
+
+      // Consume exactly one edit layer per key press.
+      event.preventDefault()
+      event.stopPropagation()
+
+      if (editing.type) {
+        if (event.key === 'Escape') {
+          handleCancelEdit()
+        } else {
+          handleSave()
+        }
+        return
+      }
+
+      // No nested edit is active: this key press exits the overall edit mode.
+      setIsEditMode(false)
+    }
+
+    window.addEventListener('keydown', handleEditorKeyDown, true)
+    return () => window.removeEventListener('keydown', handleEditorKeyDown, true)
+  }, [isEditMode, editing])
+
   return (
     <div className="bookmarks-container">
       <div className="bookmarks-header">
@@ -234,7 +240,6 @@ export function Bookmarks({
         <button 
           className="action-btn-mini"
           style={{ opacity: isEditMode ? 1 : 0.5 }}
-          onMouseDown={handleEditModeMouseDown}
           onClick={handleEditModeToggle}
           title={isEditMode ? "Done editing" : "Edit bookmarks"}
         >
@@ -288,15 +293,23 @@ export function Bookmarks({
           >
             <div className="category-header">
               {editing.type === 'category' && editing.categoryId === cat.id ? (
-                <input
-                  ref={inputRef}
-                  type="text"
-                  className="inline-input"
-                  value={editing.value}
-                  onChange={e => setEditing({ ...editing, value: e.target.value })}
-                  onKeyDown={handleKeyDown}
-                  onBlur={handleCategoryBlur}
-                />
+                <div className="category-edit-form">
+                  <input
+                    ref={inputRef}
+                    type="text"
+                    className="inline-input"
+                    value={editing.value}
+                    onChange={e => setEditing({ ...editing, value: e.target.value })}
+                  />
+                  <div className="edit-actions">
+                    <button className="action-btn-mini" onClick={handleSave} title="Save category name">
+                      <Check size={12} />
+                    </button>
+                    <button className="action-btn-mini" onClick={handleCancelEdit} title="Cancel category edit">
+                      <X size={12} />
+                    </button>
+                  </div>
+                </div>
               ) : (
                 <span className="category-name category-name-user" title={cat.name}>{cat.name}</span>
               )}
@@ -347,7 +360,6 @@ export function Bookmarks({
                         placeholder="Title"
                         value={editing.value}
                         onChange={e => setEditing({ ...editing, value: e.target.value })}
-                        onKeyDown={handleKeyDown}
                       />
                       <input
                         type="text"
@@ -355,13 +367,12 @@ export function Bookmarks({
                         placeholder="URL"
                         value={editing.url}
                         onChange={e => setEditing({ ...editing, url: e.target.value })}
-                        onKeyDown={handleKeyDown}
                       />
                       <div className="edit-actions">
                         <button className="action-btn-mini" onClick={handleSave}>
                           <Check size={12} />
                         </button>
-                        <button className="action-btn-mini" onClick={() => setEditing({ type: null })}>
+                        <button className="action-btn-mini" onClick={handleCancelEdit}>
                           <X size={12} />
                         </button>
                       </div>
@@ -406,7 +417,6 @@ export function Bookmarks({
                     placeholder="Title"
                     value={editing.value}
                     onChange={e => setEditing({ ...editing, value: e.target.value })}
-                    onKeyDown={handleKeyDown}
                   />
                   <input
                     type="text"
@@ -414,13 +424,12 @@ export function Bookmarks({
                     placeholder="URL"
                     value={editing.url}
                     onChange={e => setEditing({ ...editing, url: e.target.value })}
-                    onKeyDown={handleKeyDown}
                   />
                   <div className="edit-actions">
                     <button className="action-btn-mini" onClick={handleSave}>
                       <Check size={12} />
                     </button>
-                    <button className="action-btn-mini" onClick={() => setEditing({ type: null })}>
+                    <button className="action-btn-mini" onClick={handleCancelEdit}>
                       <X size={12} />
                     </button>
                   </div>
