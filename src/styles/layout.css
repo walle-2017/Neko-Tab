@@ -391,36 +391,27 @@
 
 /* Categories Grid - horizontal layout */
 .categories-scroll-shell {
-  position: relative;
   flex: 1 1 auto;
   min-height: 0;
   width: 100%;
   overflow: hidden;
+  display: grid;
+  grid-template-rows: 18px minmax(0, 1fr) 18px;
 }
 
-.categories-scroll-indicator {
-  position: absolute;
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 4;
+.categories-scroll-indicator-row {
   pointer-events: none;
   color: var(--text-secondary, var(--ash));
   opacity: 0.72;
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 28px;
-  height: 18px;
-  background: var(--bg-primary, rgba(0, 0, 0, 0.18));
-  border-radius: 9px;
+  min-height: 18px;
 }
 
-.categories-scroll-indicator-top {
-  top: 2px;
-}
-
-.categories-scroll-indicator-bottom {
-  bottom: 2px;
+.categories-scroll-indicator-row svg {
+  width: 16px;
+  height: 16px;
 }
 
 .categories-grid {
@@ -561,32 +552,33 @@
 
 /* Bookmarks list */
 .bookmark-list-shell {
-  position: relative;
   height: 95px;
 }
 
-.bookmark-scroll-indicator {
-  position: absolute;
-  right: -2px;
-  z-index: 3;
+.bookmark-list-shell-scrollable {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 16px;
+  column-gap: 4px;
+}
+
+.bookmark-scroll-indicator-gutter {
   pointer-events: none;
   color: var(--text-secondary, var(--ash));
   opacity: 0.72;
   display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  width: 16px;
+  height: 95px;
+}
+
+.bookmark-scroll-indicator {
+  width: 16px;
+  height: 16px;
+  display: flex;
   align-items: center;
   justify-content: center;
-  width: 14px;
-  height: 14px;
-  background: var(--bg-primary, rgba(0, 0, 0, 0.18));
-  border-radius: 7px;
-}
-
-.bookmark-scroll-indicator-top {
-  top: -2px;
-}
-
-.bookmark-scroll-indicator-bottom {
-  bottom: -2px;
 }
 
 .bookmarks-list {
