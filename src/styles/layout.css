@@ -478,6 +478,30 @@
   gap: 1px;
 }
 
+.bookmarks-list-scrollable {
+  max-height: 75px;
+  overflow-y: scroll;
+  overflow-x: hidden;
+  padding-right: 6px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border, rgba(255, 255, 255, 0.25)) transparent;
+  scrollbar-gutter: stable;
+  overscroll-behavior: contain;
+}
+
+.bookmarks-list-scrollable::-webkit-scrollbar {
+  width: 4px;
+}
+
+.bookmarks-list-scrollable::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.bookmarks-list-scrollable::-webkit-scrollbar-thumb {
+  background: var(--border, rgba(255, 255, 255, 0.25));
+  border-radius: 2px;
+}
+
 .bookmark-item {
   display: flex;
   align-items: center;
