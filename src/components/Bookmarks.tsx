@@ -25,6 +25,11 @@ interface EditingState {
   url?: string
 }
 
+interface ScrollHintState {
+  up: boolean
+  down: boolean
+}
+
 export function Bookmarks({
   categories,
   onAddCategory,
@@ -47,6 +52,9 @@ export function Bookmarks({
     }
   })
   const inputRef = useRef<HTMLInputElement>(null)
+  const categoriesGridRef = useRef<HTMLDivElement>(null)
+  const [categoryScrollHint, setCategoryScrollHint] = useState<ScrollHintState>({ up: false, down: false })
+  const [bookmarkScrollHints, setBookmarkScrollHints] = useState<Record<string, ScrollHintState>>({})
 
   useEffect(() => {
     if (typeof chrome !== 'undefined' && chrome.topSites) {
@@ -70,6 +78,52 @@ export function Bookmarks({
       inputRef.current.select()
     }
   }, [editing.type, editing.categoryId, editing.bookmarkId])
+
+  const getScrollHintState = (element: HTMLElement): ScrollHintState => {
+    const maxScrollTop = Math.max(0, element.scrollHeight - element.clientHeight)
+    return {
+      up: element.scrollTop > 1,
+      down: element.scrollTop < maxScrollTop - 1,
+    }
+  }
+
+  const updateCategoryScrollHint = () => {
+    const element = categoriesGridRef.current
+    if (!element) return
+
+    const next = getScrollHintState(element)
+    setCategoryScrollHint(prev =>
+      prev.up === next.up && prev.down === next.down ? prev : next
+    )
+  }
+
+  const handleBookmarkScroll = (categoryId: string, event: React.UIEvent<HTMLDivElement>) => {
+    const next = getScrollHintState(event.currentTarget)
+    setBookmarkScrollHints(prev => {
+      const current = prev[categoryId]
+      if (current?.up === next.up && current?.down === next.down) return prev
+      return { ...prev, [categoryId]: next }
+    })
+  }
+
+  const scrollHintClass = (hint: ScrollHintState) =>
+    `${hint.up ? ' scroll-hint-top' : ''}${hint.down ? ' scroll-hint-bottom' : ''}`
+
+  useEffect(() => {
+    const element = categoriesGridRef.current
+    if (!element) return
+
+    const frame = requestAnimationFrame(updateCategoryScrollHint)
+    const resizeObserver = new ResizeObserver(updateCategoryScrollHint)
+    resizeObserver.observe(element)
+    window.addEventListener('resize', updateCategoryScrollHint)
+
+    return () => {
+      cancelAnimationFrame(frame)
+      resizeObserver.disconnect()
+      window.removeEventListener('resize', updateCategoryScrollHint)
+    }
+  }, [categories, topSites.length, showBookmarks])
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Escape') {
@@ -161,7 +215,9 @@ export function Bookmarks({
       </div>
 
       <div 
-        className={`categories-grid ${!showBookmarks ? 'no-transition' : ''}`}
+        ref={categoriesGridRef}
+        className={`categories-grid${scrollHintClass(categoryScrollHint)} ${!showBookmarks ? 'no-transition' : ''}`}
+        onScroll={updateCategoryScrollHint}
         style={{ 
           opacity: showBookmarks ? 1 : 0,
           pointerEvents: showBookmarks ? 'auto' : 'none',
@@ -241,7 +297,8 @@ export function Bookmarks({
             </div>
             
             <div
-              className={`bookmarks-list bookmarks-list-fixed${cat.bookmarks.length > 4 ? ' bookmarks-list-scrollable' : ''}${editing.categoryId === cat.id && (editing.type === 'bookmark' || editing.type === 'new-bookmark') ? ' bookmarks-list-editing' : ''}`}
+              className={`bookmarks-list bookmarks-list-fixed${cat.bookmarks.length > 4 ? ` bookmarks-list-scrollable${scrollHintClass(bookmarkScrollHints[cat.id] ?? { up: false, down: true })}` : ''}${editing.categoryId === cat.id && (editing.type === 'bookmark' || editing.type === 'new-bookmark') ? ' bookmarks-list-editing' : ''}`}
+              onScroll={cat.bookmarks.length > 4 ? (event) => handleBookmarkScroll(cat.id, event) : undefined}
             >
               {cat.bookmarks.map(bookmark => (
                 <div 
