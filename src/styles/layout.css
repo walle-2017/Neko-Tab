@@ -500,6 +500,7 @@
 .category-actions {
   display: flex;
   gap: 2px;
+  flex: 0 0 auto;
 }
 
 /* Action buttons - rectangular with 0 radius */
@@ -645,6 +646,7 @@
 .bookmark-actions {
   display: flex;
   gap: 2px;
+  flex: 0 0 auto;
 }
 
 /* Inline input */
