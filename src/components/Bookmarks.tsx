@@ -215,16 +215,9 @@ export function Bookmarks({
       </div>
 
       <div className="categories-scroll-shell">
-        {categoryScrollHint.up && (
-          <div className="categories-scroll-indicator categories-scroll-indicator-top" aria-hidden="true">
-            <ChevronUp size={16} />
-          </div>
-        )}
-        {categoryScrollHint.down && (
-          <div className="categories-scroll-indicator categories-scroll-indicator-bottom" aria-hidden="true">
-            <ChevronDown size={16} />
-          </div>
-        )}
+        <div className="categories-scroll-indicator-row categories-scroll-indicator-row-top" aria-hidden="true">
+          {categoryScrollHint.up && <ChevronUp size={16} />}
+        </div>
         <div 
           ref={categoriesGridRef}
           className={`categories-grid${scrollHintClass(categoryScrollHint)} ${!showBookmarks ? 'no-transition' : ''}`}
@@ -307,17 +300,7 @@ export function Bookmarks({
               )}
             </div>
             
-            <div className="bookmark-list-shell">
-              {cat.bookmarks.length > 4 && (bookmarkScrollHints[cat.id]?.up ?? false) && (
-                <div className="bookmark-scroll-indicator bookmark-scroll-indicator-top" aria-hidden="true">
-                  <ChevronUp size={12} />
-                </div>
-              )}
-              {cat.bookmarks.length > 4 && (bookmarkScrollHints[cat.id]?.down ?? true) && (
-                <div className="bookmark-scroll-indicator bookmark-scroll-indicator-bottom" aria-hidden="true">
-                  <ChevronDown size={12} />
-                </div>
-              )}
+            <div className={`bookmark-list-shell${cat.bookmarks.length > 4 ? ' bookmark-list-shell-scrollable' : ''}`}>
               <div
                 className={`bookmarks-list bookmarks-list-fixed${cat.bookmarks.length > 4 ? ` bookmarks-list-scrollable${scrollHintClass(bookmarkScrollHints[cat.id] ?? { up: false, down: true })}` : ''}${editing.categoryId === cat.id && (editing.type === 'bookmark' || editing.type === 'new-bookmark') ? ' bookmarks-list-editing' : ''}`}
                 onScroll={cat.bookmarks.length > 4 ? (event) => handleBookmarkScroll(cat.id, event) : undefined}
@@ -416,9 +399,22 @@ export function Bookmarks({
                 </div>
               )}
               </div>
+              {cat.bookmarks.length > 4 && (
+                <div className="bookmark-scroll-indicator-gutter" aria-hidden="true">
+                  <div className="bookmark-scroll-indicator">
+                    {(bookmarkScrollHints[cat.id]?.up ?? false) && <ChevronUp size={12} />}
+                  </div>
+                  <div className="bookmark-scroll-indicator">
+                    {(bookmarkScrollHints[cat.id]?.down ?? true) && <ChevronDown size={12} />}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         ))}
+        </div>
+        <div className="categories-scroll-indicator-row categories-scroll-indicator-row-bottom" aria-hidden="true">
+          {categoryScrollHint.down && <ChevronDown size={16} />}
         </div>
       </div>
     </div>
