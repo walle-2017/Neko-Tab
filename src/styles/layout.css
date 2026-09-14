@@ -401,23 +401,43 @@
   min-height: 0;
   overflow-y: auto;
   overflow-x: hidden;
-  padding-right: 6px;
   overscroll-behavior: contain;
-  scrollbar-width: thin;
-  scrollbar-color: var(--border, rgba(255, 255, 255, 0.25)) transparent;
+  scrollbar-width: none;
 }
 
 .categories-grid::-webkit-scrollbar {
-  width: 6px;
+  display: none;
 }
 
-.categories-grid::-webkit-scrollbar-track {
-  background: transparent;
+/* Scroll affordance without persistent scrollbars */
+.categories-grid.scroll-hint-top {
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 16px, #000 100%);
+  mask-image: linear-gradient(to bottom, transparent 0, #000 16px, #000 100%);
 }
 
-.categories-grid::-webkit-scrollbar-thumb {
-  background: var(--border, rgba(255, 255, 255, 0.25));
-  border-radius: 3px;
+.categories-grid.scroll-hint-bottom {
+  -webkit-mask-image: linear-gradient(to bottom, #000 0, #000 calc(100% - 16px), transparent 100%);
+  mask-image: linear-gradient(to bottom, #000 0, #000 calc(100% - 16px), transparent 100%);
+}
+
+.categories-grid.scroll-hint-top.scroll-hint-bottom {
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 16px, #000 calc(100% - 16px), transparent 100%);
+  mask-image: linear-gradient(to bottom, transparent 0, #000 16px, #000 calc(100% - 16px), transparent 100%);
+}
+
+.bookmarks-list-scrollable.scroll-hint-top {
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 7px, #000 100%);
+  mask-image: linear-gradient(to bottom, transparent 0, #000 7px, #000 100%);
+}
+
+.bookmarks-list-scrollable.scroll-hint-bottom {
+  -webkit-mask-image: linear-gradient(to bottom, #000 0, #000 calc(100% - 7px), transparent 100%);
+  mask-image: linear-gradient(to bottom, #000 0, #000 calc(100% - 7px), transparent 100%);
+}
+
+.bookmarks-list-scrollable.scroll-hint-top.scroll-hint-bottom {
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 7px, #000 calc(100% - 7px), transparent 100%);
+  mask-image: linear-gradient(to bottom, transparent 0, #000 7px, #000 calc(100% - 7px), transparent 100%);
 }
 
 .category-column {
@@ -522,27 +542,16 @@
 .bookmarks-list-scrollable {
   overflow-y: scroll;
   overflow-x: hidden;
-  padding-right: 6px;
-  scrollbar-width: thin;
-  scrollbar-color: var(--border, rgba(255, 255, 255, 0.25)) transparent;
-  scrollbar-gutter: stable;
+  scrollbar-width: none;
 }
 
 .bookmarks-list-editing {
   overflow-y: auto;
 }
 
-.bookmarks-list-scrollable::-webkit-scrollbar {
-  width: 4px;
-}
-
-.bookmarks-list-scrollable::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.bookmarks-list-scrollable::-webkit-scrollbar-thumb {
-  background: var(--border, rgba(255, 255, 255, 0.25));
-  border-radius: 2px;
+.bookmarks-list-scrollable::-webkit-scrollbar,
+.bookmarks-list-editing::-webkit-scrollbar {
+  display: none;
 }
 
 .bookmark-item {
