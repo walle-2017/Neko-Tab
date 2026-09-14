@@ -547,6 +547,12 @@
 
 .bookmarks-list-editing {
   overflow-y: auto;
+  scrollbar-width: none;
+}
+
+.bookmarks-list-scrollable.bookmarks-list-editing {
+  -webkit-mask-image: none;
+  mask-image: none;
 }
 
 .bookmarks-list-scrollable::-webkit-scrollbar,
