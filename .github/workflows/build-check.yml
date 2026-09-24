@@ -30,3 +30,9 @@ jobs:
 
       - name: Run Build
         run: npm run build
+      - name: Upload inner-scroll clipping test package
+        uses: actions/upload-artifact@v4
+        with:
+          name: neko-tab-inner-scroll-clipping-test
+          path: dist/
+          if-no-files-found: error
