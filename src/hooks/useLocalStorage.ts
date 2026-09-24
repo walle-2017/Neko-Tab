@@ -249,24 +249,18 @@ export function useBookmarks() {
 
   const reorderCategories = useCallback((
     activeCategoryId: string,
-    overCategoryId: string,
-    position: 'before' | 'after'
+    targetIndex: number
   ) => {
-    if (activeCategoryId === overCategoryId) return
-
     setCategories(prev => {
-      const activeIndex = prev.findIndex(cat => cat.id === activeCategoryId)
-      const overIndex = prev.findIndex(cat => cat.id === overCategoryId)
-      if (activeIndex < 0 || overIndex < 0) return prev
+      const sourceIndex = prev.findIndex(cat => cat.id === activeCategoryId)
+      if (sourceIndex < 0) return prev
+
+      const boundedTarget = Math.max(0, Math.min(targetIndex, prev.length))
+      const insertIndex = boundedTarget - (sourceIndex < boundedTarget ? 1 : 0)
+      if (insertIndex === sourceIndex) return prev
 
       const next = [...prev]
-      const [activeCategory] = next.splice(activeIndex, 1)
-      const nextOverIndex = next.findIndex(cat => cat.id === overCategoryId)
-      const insertIndex = Math.min(
-        next.length,
-        nextOverIndex + (position === 'after' ? 1 : 0)
-      )
-
+      const [activeCategory] = next.splice(sourceIndex, 1)
       next.splice(insertIndex, 0, activeCategory)
       return next
     })
@@ -276,16 +270,8 @@ export function useBookmarks() {
     bookmarkId: string,
     sourceCategoryId: string,
     targetCategoryId: string,
-    targetBookmarkId?: string,
-    position: 'before' | 'after' = 'before'
+    targetIndex: number
   ) => {
-    if (
-      sourceCategoryId === targetCategoryId &&
-      targetBookmarkId === bookmarkId
-    ) {
-      return
-    }
-
     setCategories(prev => {
       const next = prev.map(cat => ({
         ...cat,
@@ -301,19 +287,24 @@ export function useBookmarks() {
       )
       if (sourceIndex < 0) return prev
 
-      const [bookmark] = sourceCategory.bookmarks.splice(sourceIndex, 1)
+      const boundedTarget = Math.max(
+        0,
+        Math.min(targetIndex, targetCategory.bookmarks.length)
+      )
+      const insertIndex =
+        sourceCategoryId === targetCategoryId && sourceIndex < boundedTarget
+          ? boundedTarget - 1
+          : boundedTarget
 
-      let targetIndex = targetCategory.bookmarks.length
-      if (targetBookmarkId) {
-        const foundIndex = targetCategory.bookmarks.findIndex(
-          target => target.id === targetBookmarkId
-        )
-        if (foundIndex >= 0) {
-          targetIndex = foundIndex + (position === 'after' ? 1 : 0)
-        }
+      if (
+        sourceCategoryId === targetCategoryId &&
+        insertIndex === sourceIndex
+      ) {
+        return prev
       }
 
-      targetCategory.bookmarks.splice(targetIndex, 0, bookmark)
+      const [bookmark] = sourceCategory.bookmarks.splice(sourceIndex, 1)
+      targetCategory.bookmarks.splice(insertIndex, 0, bookmark)
       return next
     })
   }, [setCategories])
