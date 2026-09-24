@@ -397,6 +397,7 @@
   overflow: hidden;
   display: grid;
   grid-template-rows: 18px minmax(0, 1fr) 18px;
+  position: relative;
 }
 
 .categories-scroll-indicator-row {
@@ -422,6 +423,8 @@
   align-items: start;
   height: 100%;
   min-height: 0;
+  padding: 5px 10px 6px;
+  box-sizing: border-box;
   overflow-y: auto;
   overflow-x: hidden;
   overscroll-behavior: contain;
@@ -466,6 +469,7 @@
 .category-column {
   min-width: 0;
   width: 100%;
+  position: relative;
 }
 
 .add-category-column {
@@ -530,32 +534,45 @@
   opacity: 0.28;
 }
 
-.bookmarks-container.is-pointer-dragging .category-column[data-user-category-id] {
-  outline: 1px solid color-mix(in srgb, var(--text-secondary, var(--ash)) 13%, transparent);
-  outline-offset: 3px;
+.bookmarks-container.is-pointer-dragging .category-column[data-user-category-id]::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border: 1px solid color-mix(in srgb, var(--text-secondary, var(--ash)) 13%, transparent);
+  pointer-events: none;
+  z-index: 2;
 }
 
-.category-column.bookmark-drop-category {
-  outline-color: color-mix(in srgb, var(--accent, var(--cyan-accent)) 48%, transparent) !important;
+.bookmarks-container.is-pointer-dragging .category-column[data-user-category-id].is-dragging::before {
+  border-style: dashed;
+  border-color: color-mix(in srgb, var(--text-secondary, var(--ash)) 9%, transparent);
+}
+
+.bookmarks-container.is-pointer-dragging .category-column[data-user-category-id].bookmark-drop-category::before {
+  border-color: color-mix(in srgb, var(--accent, var(--cyan-accent)) 48%, transparent);
 }
 
 .drag-drop-slot-layer {
-  position: fixed;
-  inset: 0;
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 18px;
+  bottom: 18px;
   z-index: 1199;
   pointer-events: none;
+  overflow: hidden;
 }
 
 .drag-drop-slot-hint {
-  position: fixed;
+  position: absolute;
   pointer-events: none;
   background: color-mix(in srgb, var(--text-secondary, var(--ash)) 18%, transparent);
   opacity: 0.72;
 }
 
 .drag-drop-indicator {
-  position: fixed;
-  z-index: 1200;
+  position: absolute;
+  z-index: 2;
   pointer-events: none;
   opacity: 0;
   background: var(--accent, var(--cyan-accent));
