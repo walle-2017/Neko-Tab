@@ -530,9 +530,27 @@
   opacity: 0.28;
 }
 
-.category-column.bookmark-drop-category {
-  outline: 1px solid color-mix(in srgb, var(--accent, var(--cyan-accent)) 48%, transparent);
+.bookmarks-container.is-pointer-dragging .category-column[data-user-category-id] {
+  outline: 1px solid color-mix(in srgb, var(--text-secondary, var(--ash)) 13%, transparent);
   outline-offset: 3px;
+}
+
+.category-column.bookmark-drop-category {
+  outline-color: color-mix(in srgb, var(--accent, var(--cyan-accent)) 48%, transparent) !important;
+}
+
+.drag-drop-slot-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 1199;
+  pointer-events: none;
+}
+
+.drag-drop-slot-hint {
+  position: fixed;
+  pointer-events: none;
+  background: color-mix(in srgb, var(--text-secondary, var(--ash)) 18%, transparent);
+  opacity: 0.72;
 }
 
 .drag-drop-indicator {
@@ -575,41 +593,45 @@
   text-overflow: ellipsis;
 }
 
+.bookmarks-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 0 0 auto;
+}
+
 .bookmark-drag-cancel-zone {
-  position: fixed;
-  left: 50%;
-  bottom: 86px;
-  z-index: 1202;
-  transform: translateX(-50%);
-  min-width: 210px;
-  height: 34px;
-  padding: 0 14px;
+  height: 24px;
+  min-width: 116px;
+  padding: 0 8px;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 7px;
-  border: 1px dashed color-mix(in srgb, var(--status-danger) 55%, transparent);
-  background: color-mix(in srgb, var(--bg-primary, var(--onyx)) 92%, transparent);
+  gap: 5px;
+  border: 1px dashed color-mix(in srgb, var(--status-danger) 45%, transparent);
+  background: transparent;
   color: var(--text-secondary, var(--ash));
-  font-size: 11px;
-  letter-spacing: 0.6px;
+  font-size: 10px;
+  line-height: 1;
+  letter-spacing: 0.45px;
+  white-space: nowrap;
   user-select: none;
+  opacity: 0.58;
   transition:
     border-color 120ms ease,
     background-color 120ms ease,
     color 120ms ease,
-    transform 120ms ease,
-    opacity 120ms ease;
-  opacity: 0.78;
+    opacity 120ms ease,
+    transform 120ms ease;
 }
 
 .bookmark-drag-cancel-zone.is-active {
   border-style: solid;
   border-color: var(--status-danger);
-  background: color-mix(in srgb, var(--status-danger) 16%, var(--bg-primary, var(--onyx)));
+  background: color-mix(in srgb, var(--status-danger) 12%, transparent);
   color: var(--status-danger);
-  transform: translateX(-50%) scale(1.03);
   opacity: 1;
+  transform: scale(1.02);
 }
 
 .bookmark-pointer-drag-active .bookmark-drag-cancel-zone {
