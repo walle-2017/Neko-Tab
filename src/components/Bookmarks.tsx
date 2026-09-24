@@ -104,6 +104,7 @@ export function Bookmarks({
   const cancelZoneRef = useRef<HTMLDivElement>(null)
   const dragOverlayRef = useRef<HTMLDivElement>(null)
   const dropIndicatorRef = useRef<HTMLDivElement>(null)
+  const dropSlotLayerRef = useRef<HTMLDivElement>(null)
   const dragFrameRef = useRef<number | null>(null)
   const lastFrameTimeRef = useRef<number | null>(null)
   const dropSlotFingerprintRef = useRef('')
@@ -316,7 +317,7 @@ export function Bookmarks({
     const gridRect = grid.getBoundingClientRect()
     const visuals: DropSlotVisual[] = []
 
-    const edgeSlotGap = 8
+    const edgeSlotGap = 13
     const viewportInset = 3
 
     rows.forEach((row, rowIndex) => {
@@ -509,6 +510,27 @@ export function Bookmarks({
       geometry: toGridGeometry(visual.geometry),
     }))
 
+    // Keep existing slot elements visually locked to the scrolled content
+    // immediately; React state catches up afterward without a one-frame lag.
+    const slotLayer = dropSlotLayerRef.current
+    if (slotLayer) {
+      const slotElements = new Map(
+        Array.from(
+          slotLayer.querySelectorAll<HTMLElement>('[data-drop-slot-key]')
+        ).map(element => [element.dataset.dropSlotKey, element])
+      )
+
+      for (const visual of visuals) {
+        const element = slotElements.get(visual.key)
+        if (!element) continue
+
+        element.style.left = `${visual.geometry.left}px`
+        element.style.top = `${visual.geometry.top}px`
+        element.style.width = `${visual.geometry.width}px`
+        element.style.height = `${visual.geometry.height}px`
+      }
+    }
+
     const fingerprint = visuals
       .map(visual => {
         const { left, top, width, height } = visual.geometry
@@ -632,8 +654,6 @@ export function Bookmarks({
     const movedEnough =
       squaredDistance(point, dragStartPointRef.current.x, dragStartPointRef.current.y) > 16
 
-    refreshDropSlotVisuals(activeDrag)
-
     if (inCancelZone) {
       updateDropIndicator(null)
     }
@@ -667,6 +687,10 @@ export function Bookmarks({
         updateBookmarkTarget(point)
       }
     }
+
+    // Recompute inactive slot geometry after any scroll mutation so it stays
+    // visually synchronized with category/bookmark content in the same frame.
+    refreshDropSlotVisuals(activeDrag)
 
     dragFrameRef.current = requestAnimationFrame(runDragFrame)
   }
@@ -1179,10 +1203,15 @@ export function Bookmarks({
         </div>
 
         {dragState && (
-          <div className="drag-drop-slot-layer" aria-hidden="true">
+          <div
+            ref={dropSlotLayerRef}
+            className="drag-drop-slot-layer"
+            aria-hidden="true"
+          >
             {dropSlotVisuals.map(visual => (
               <div
                 key={visual.key}
+                data-drop-slot-key={visual.key}
                 className={`drag-drop-slot-hint ${
                   visual.geometry.height > visual.geometry.width
                     ? 'drag-drop-slot-hint-vertical'
