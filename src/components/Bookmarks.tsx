@@ -92,6 +92,7 @@ export function Bookmarks({
   const dragStateRef = useRef<DragState>(null)
   const lastValidTargetRef = useRef<DropTarget>(null)
   const pointerRef = useRef<PointerPosition>({ x: 0, y: 0 })
+  const dragStartPointRef = useRef<PointerPosition>({ x: 0, y: 0 })
   const cancelZoneActiveRef = useRef(false)
   const cancelZoneRef = useRef<HTMLDivElement>(null)
   const dragOverlayRef = useRef<HTMLDivElement>(null)
@@ -190,8 +191,9 @@ export function Bookmarks({
     target: Exclude<DropTarget, null>,
     geometry: DropIndicatorGeometry
   ) => {
+    const previous = lastValidTargetRef.current
     lastValidTargetRef.current = target
-    if (!targetsEqual(dropTarget, target)) {
+    if (!targetsEqual(previous, target)) {
       setDropTarget(target)
     }
     updateDropIndicator(geometry)
@@ -470,7 +472,10 @@ export function Bookmarks({
     const frameScale = Math.min(2, Math.max(0.5, (timestamp - previousTime) / 16.67))
     lastFrameTimeRef.current = timestamp
 
-    if (!inCancelZone) {
+    const movedEnough =
+      squaredDistance(point, dragStartPointRef.current.x, dragStartPointRef.current.y) > 16
+
+    if (!inCancelZone && movedEnough) {
       let innerScrolling = false
 
       if (activeDrag.type === 'bookmark') {
@@ -514,6 +519,7 @@ export function Bookmarks({
     event.stopPropagation()
 
     pointerRef.current = { x: event.clientX, y: event.clientY }
+    dragStartPointRef.current = { x: event.clientX, y: event.clientY }
     dragStateRef.current = drag
     lastValidTargetRef.current = initialTarget
     setDragState(drag)
@@ -521,13 +527,9 @@ export function Bookmarks({
     setCancelZoneActive(false)
     document.body.classList.add('bookmark-pointer-drag-active')
 
+    updateDropIndicator(null)
     requestAnimationFrame(() => {
       updateDragOverlay(pointerRef.current)
-      if (drag.type === 'category') {
-        updateCategoryTarget(pointerRef.current)
-      } else {
-        updateBookmarkTarget(pointerRef.current)
-      }
     })
   }
 
