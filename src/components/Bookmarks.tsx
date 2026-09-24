@@ -179,6 +179,20 @@ export function Bookmarks({
     return false
   }
 
+  const toGridGeometry = (
+    geometry: DropIndicatorGeometry
+  ): DropIndicatorGeometry => {
+    const gridRect = categoriesGridRef.current?.getBoundingClientRect()
+    if (!gridRect) return geometry
+
+    return {
+      left: geometry.left - gridRect.left,
+      top: geometry.top - gridRect.top,
+      width: geometry.width,
+      height: geometry.height,
+    }
+  }
+
   const updateDropIndicator = (geometry: DropIndicatorGeometry | null) => {
     const element = dropIndicatorRef.current
     if (!element) return
@@ -188,10 +202,11 @@ export function Bookmarks({
       return
     }
 
-    element.style.left = `${geometry.left}px`
-    element.style.top = `${geometry.top}px`
-    element.style.width = `${geometry.width}px`
-    element.style.height = `${geometry.height}px`
+    const relativeGeometry = toGridGeometry(geometry)
+    element.style.left = `${relativeGeometry.left}px`
+    element.style.top = `${relativeGeometry.top}px`
+    element.style.width = `${relativeGeometry.width}px`
+    element.style.height = `${relativeGeometry.height}px`
     element.style.opacity = '1'
   }
 
@@ -301,6 +316,9 @@ export function Bookmarks({
     const gridRect = grid.getBoundingClientRect()
     const visuals: DropSlotVisual[] = []
 
+    const edgeSlotGap = 8
+    const viewportInset = 3
+
     rows.forEach((row, rowIndex) => {
       const first = row[0]
       const last = row[row.length - 1]
@@ -317,7 +335,10 @@ export function Bookmarks({
       const leftX =
         previousRect && Math.abs(previousRect.top - firstRect.top) < 8
           ? (previousRect.right + firstRect.left) / 2
-          : Math.max(gridRect.left + 1, firstRect.left - 16)
+          : Math.max(
+              gridRect.left + viewportInset,
+              firstRect.left - edgeSlotGap
+            )
 
       visuals.push({
         key: `category-row-${rowIndex}-start-${firstIndex}`,
@@ -348,15 +369,10 @@ export function Bookmarks({
         })
       }
 
-      const nextVisualSibling =
-        last.nextElementSibling instanceof HTMLElement
-          ? last.nextElementSibling
-          : null
-      const nextRect = nextVisualSibling?.getBoundingClientRect()
-      const rightX =
-        nextRect && Math.abs(nextRect.top - lastRect.top) < 8
-          ? (lastRect.right + nextRect.left) / 2
-          : Math.min(gridRect.right - 1, lastRect.right + 16)
+      const rightX = Math.min(
+        gridRect.right - viewportInset,
+        lastRect.right + edgeSlotGap
+      )
 
       visuals.push({
         key: `category-row-${rowIndex}-end-${lastIndex + 1}`,
@@ -483,10 +499,15 @@ export function Bookmarks({
   }
 
   const refreshDropSlotVisuals = (activeDrag: Exclude<DragState, null>) => {
-    const visuals =
+    const rawVisuals =
       activeDrag.type === 'category'
         ? getCategorySlotVisuals()
         : getBookmarkSlotVisuals()
+
+    const visuals = rawVisuals.map(visual => ({
+      ...visual,
+      geometry: toGridGeometry(visual.geometry),
+    }))
 
     const fingerprint = visuals
       .map(visual => {
@@ -1156,13 +1177,8 @@ export function Bookmarks({
           </div>
         ))}
         </div>
-        <div className="categories-scroll-indicator-row categories-scroll-indicator-row-bottom" aria-hidden="true">
-          {categoryScrollHint.down && <ChevronDown size={16} />}
-        </div>
-      </div>
 
-      {dragState && (
-        <>
+        {dragState && (
           <div className="drag-drop-slot-layer" aria-hidden="true">
             {dropSlotVisuals.map(visual => (
               <div
@@ -1176,21 +1192,27 @@ export function Bookmarks({
                 }}
               />
             ))}
+            <div
+              ref={dropIndicatorRef}
+              className="drag-drop-indicator"
+            />
           </div>
-          <div
-            ref={dropIndicatorRef}
-            className="drag-drop-indicator"
-            aria-hidden="true"
-          />
-          <div
-            ref={dragOverlayRef}
-            className="bookmark-drag-overlay"
-            aria-hidden="true"
-          >
-            <GripVertical size={12} />
-            <span>{dragState.label}</span>
-          </div>
-        </>
+        )}
+
+        <div className="categories-scroll-indicator-row categories-scroll-indicator-row-bottom" aria-hidden="true">
+          {categoryScrollHint.down && <ChevronDown size={16} />}
+        </div>
+      </div>
+
+      {dragState && (
+        <div
+          ref={dragOverlayRef}
+          className="bookmark-drag-overlay"
+          aria-hidden="true"
+        >
+          <GripVertical size={12} />
+          <span>{dragState.label}</span>
+        </div>
       )}
     </div>
   )
