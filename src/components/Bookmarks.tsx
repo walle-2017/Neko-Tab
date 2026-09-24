@@ -467,6 +467,15 @@ export function Bookmarks({
     }
   }
 
+  const isBookmarkSlotVisible = (
+    list: HTMLElement,
+    geometry: DropIndicatorGeometry
+  ) => {
+    const listRect = list.getBoundingClientRect()
+    const centerY = geometry.top + geometry.height / 2
+    return centerY >= listRect.top && centerY <= listRect.bottom
+  }
+
 
   const getBookmarkSlotVisuals = (): DropSlotVisual[] => {
     const grid = categoriesGridRef.current
@@ -488,10 +497,13 @@ export function Bookmarks({
       const count = items.length
 
       for (let index = 0; index <= count; index += 1) {
+        const geometry = getBookmarkSlotGeometry(list, index)
+        if (!isBookmarkSlotVisible(list, geometry)) continue
+
         visuals.push({
           key: `bookmark-${categoryId}-slot-${index}`,
           target: { type: 'bookmark-slot', categoryId, index },
-          geometry: getBookmarkSlotGeometry(list, index),
+          geometry,
         })
       }
     })
@@ -565,23 +577,27 @@ export function Bookmarks({
       (a, b) => Number(a.dataset.bookmarkIndex) - Number(b.dataset.bookmarkIndex)
     )
 
-    let bestIndex = 0
-    let bestDistance = Number.POSITIVE_INFINITY
+    let best:
+      | { index: number; geometry: DropIndicatorGeometry; distance: number }
+      | null = null
 
     for (let index = 0; index <= items.length; index += 1) {
       const geometry = getBookmarkSlotGeometry(list, index)
+      if (!isBookmarkSlotVisible(list, geometry)) continue
+
       const y = geometry.top + geometry.height / 2
       const distance = Math.abs(point.y - y)
-      if (distance < bestDistance) {
-        bestDistance = distance
-        bestIndex = index
+      if (!best || distance < best.distance) {
+        best = { index, geometry, distance }
       }
     }
 
-    setValidTarget(
-      { type: 'bookmark-slot', categoryId, index: bestIndex },
-      getBookmarkSlotGeometry(list, bestIndex)
-    )
+    if (best) {
+      setValidTarget(
+        { type: 'bookmark-slot', categoryId, index: best.index },
+        best.geometry
+      )
+    }
   }
 
   const getEdgeScrollSpeed = (
