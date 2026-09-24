@@ -473,7 +473,7 @@ export function Bookmarks({
   ) => {
     const listRect = list.getBoundingClientRect()
     const centerY = geometry.top + geometry.height / 2
-    return centerY >= listRect.top && centerY <= listRect.bottom
+    return centerY >= listRect.top + 1 && centerY <= listRect.bottom - 1
   }
 
 
@@ -603,6 +603,8 @@ export function Bookmarks({
         { type: 'bookmark-slot', categoryId, index: best.index },
         best.geometry
       )
+    } else {
+      updateDropIndicator(null)
     }
   }
 
