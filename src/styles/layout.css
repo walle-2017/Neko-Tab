@@ -612,6 +612,10 @@
   opacity: 1;
 }
 
+.bookmark-pointer-drag-active .bookmark-drag-cancel-zone {
+  cursor: not-allowed !important;
+}
+
 /* Action buttons - rectangular with 0 radius */
 .action-btn {
   background: none;
