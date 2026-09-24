@@ -46,7 +46,7 @@
 /* Links Column */
 .links-column {
   flex: 1;
-  max-width: 900px;
+  max-width: 940px;
   min-width: 0;
   height: 100%;
   overflow: hidden;
@@ -354,6 +354,7 @@
   align-items: center;
   margin-bottom: var(--spacing-lg);
   flex: 0 0 auto;
+  min-height: 24px;
 }
 
 .bookmarks-toggle {
@@ -397,6 +398,7 @@
   overflow: hidden;
   display: grid;
   grid-template-rows: 18px minmax(0, 1fr) 18px;
+  position: relative;
 }
 
 .categories-scroll-indicator-row {
@@ -422,6 +424,8 @@
   align-items: start;
   height: 100%;
   min-height: 0;
+  padding: 5px 18px 6px;
+  box-sizing: border-box;
   overflow-y: auto;
   overflow-x: hidden;
   overscroll-behavior: contain;
@@ -466,6 +470,7 @@
 .category-column {
   min-width: 0;
   width: 100%;
+  position: relative;
 }
 
 .add-category-column {
@@ -508,6 +513,166 @@
   display: flex;
   gap: 2px;
   flex: 0 0 auto;
+}
+
+.drag-handle {
+  cursor: grab;
+  touch-action: none;
+}
+
+.drag-handle:active,
+.bookmark-pointer-drag-active,
+.bookmark-pointer-drag-active * {
+  cursor: grabbing !important;
+}
+
+.bookmark-pointer-drag-active {
+  user-select: none;
+}
+
+.bookmark-item.is-dragging {
+  opacity: 0.28;
+}
+
+.category-column.is-dragging > * {
+  opacity: 0.28;
+}
+
+.bookmarks-container.is-pointer-dragging .category-column[data-user-category-id]::before {
+  content: '';
+  position: absolute;
+  inset: -3px -5px;
+  border: 1px solid color-mix(in srgb, var(--text-secondary, var(--ash)) 13%, transparent);
+  pointer-events: none;
+  z-index: 2;
+}
+
+.bookmarks-container.is-pointer-dragging .category-column[data-user-category-id].is-dragging::before {
+  border-style: dashed;
+  border-color: color-mix(in srgb, var(--text-secondary, var(--ash)) 34%, transparent);
+}
+
+.bookmarks-container.is-pointer-dragging .category-column[data-user-category-id].bookmark-drop-category::before {
+  border-color: color-mix(in srgb, var(--accent, var(--cyan-accent)) 48%, transparent);
+}
+
+.drag-drop-slot-layer {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 18px;
+  bottom: 18px;
+  z-index: 1199;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.drag-drop-slot-hint {
+  position: absolute;
+  pointer-events: none;
+  opacity: 0.9;
+}
+
+.drag-drop-slot-hint-vertical {
+  background: repeating-linear-gradient(
+    to bottom,
+    color-mix(in srgb, var(--text-secondary, var(--ash)) 42%, transparent) 0 4px,
+    transparent 4px 8px
+  );
+}
+
+.drag-drop-slot-hint-horizontal {
+  background: repeating-linear-gradient(
+    to right,
+    color-mix(in srgb, var(--text-secondary, var(--ash)) 42%, transparent) 0 6px,
+    transparent 6px 12px
+  );
+}
+
+.drag-drop-indicator {
+  position: absolute;
+  z-index: 2;
+  pointer-events: none;
+  opacity: 0;
+  background: var(--accent, var(--cyan-accent));
+  box-shadow: 0 0 8px color-mix(in srgb, var(--accent, var(--cyan-accent)) 45%, transparent);
+  transition: opacity 80ms ease;
+}
+
+.bookmark-drag-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 1201;
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 220px;
+  padding: 5px 8px;
+  border: 1px solid var(--accent, var(--cyan-accent));
+  background: var(--bg-primary, var(--onyx));
+  color: var(--text-primary, var(--platinum));
+  font-family: inherit;
+  font-size: 12px;
+  line-height: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  opacity: 0.94;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.28);
+  will-change: transform;
+}
+
+.bookmark-drag-overlay span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.bookmarks-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 0 0 auto;
+  min-height: 24px;
+}
+
+.bookmark-drag-cancel-zone {
+  height: 24px;
+  min-width: 116px;
+  padding: 0 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  border: 1px dashed color-mix(in srgb, var(--status-danger) 45%, transparent);
+  background: transparent;
+  color: var(--text-secondary, var(--ash));
+  font-size: 10px;
+  line-height: 1;
+  letter-spacing: 0.45px;
+  white-space: nowrap;
+  user-select: none;
+  opacity: 0.58;
+  transition:
+    border-color 120ms ease,
+    background-color 120ms ease,
+    color 120ms ease,
+    opacity 120ms ease,
+    transform 120ms ease;
+}
+
+.bookmark-drag-cancel-zone.is-active {
+  border-style: solid;
+  border-color: var(--status-danger);
+  background: color-mix(in srgb, var(--status-danger) 12%, transparent);
+  color: var(--status-danger);
+  opacity: 1;
+  transform: scale(1.02);
+}
+
+.bookmark-pointer-drag-active .bookmark-drag-cancel-zone {
+  cursor: not-allowed !important;
 }
 
 /* Action buttons - rectangular with 0 radius */
@@ -629,6 +794,11 @@
   gap: var(--spacing-xs);
   padding: 1px 0;
   min-width: 0;
+  position: relative;
+}
+
+.bookmarks-list {
+  position: relative;
 }
 
 .bookmark-link {
