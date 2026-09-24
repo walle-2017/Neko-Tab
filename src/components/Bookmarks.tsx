@@ -13,17 +13,12 @@ interface BookmarksProps {
   onAddBookmark: (categoryId: string, title: string, url: string) => void
   onDeleteBookmark: (categoryId: string, bookmarkId: string) => void
   onEditBookmark: (categoryId: string, bookmarkId: string, title: string, url: string) => void
-  onReorderCategories: (
-    activeCategoryId: string,
-    overCategoryId: string,
-    position: 'before' | 'after'
-  ) => void
+  onReorderCategories: (activeCategoryId: string, targetIndex: number) => void
   onMoveBookmark: (
     bookmarkId: string,
     sourceCategoryId: string,
     targetCategoryId: string,
-    targetBookmarkId?: string,
-    position?: 'before' | 'after'
+    targetIndex: number
   ) => void
   showBookmarks: boolean
   onToggleShowBookmarks: () => void
@@ -43,19 +38,26 @@ interface ScrollHintState {
 }
 
 type DragState =
-  | { type: 'category'; categoryId: string }
-  | { type: 'bookmark'; categoryId: string; bookmarkId: string }
+  | { type: 'category'; categoryId: string; label: string }
+  | { type: 'bookmark'; categoryId: string; bookmarkId: string; label: string }
   | null
 
 type DropTarget =
-  | { type: 'category'; categoryId: string; position: 'before' | 'after' }
-  | {
-      type: 'bookmark'
-      categoryId: string
-      bookmarkId?: string
-      position: 'before' | 'after'
-    }
+  | { type: 'category-slot'; index: number }
+  | { type: 'bookmark-slot'; categoryId: string; index: number }
   | null
+
+interface PointerPosition {
+  x: number
+  y: number
+}
+
+interface DropIndicatorGeometry {
+  left: number
+  top: number
+  width: number
+  height: number
+}
 
 export function Bookmarks({
   categories,
@@ -86,6 +88,16 @@ export function Bookmarks({
   const [bookmarkScrollHints, setBookmarkScrollHints] = useState<Record<string, ScrollHintState>>({})
   const [dragState, setDragState] = useState<DragState>(null)
   const [dropTarget, setDropTarget] = useState<DropTarget>(null)
+  const [isCancelZoneActive, setIsCancelZoneActive] = useState(false)
+  const dragStateRef = useRef<DragState>(null)
+  const lastValidTargetRef = useRef<DropTarget>(null)
+  const pointerRef = useRef<PointerPosition>({ x: 0, y: 0 })
+  const cancelZoneActiveRef = useRef(false)
+  const cancelZoneRef = useRef<HTMLDivElement>(null)
+  const dragOverlayRef = useRef<HTMLDivElement>(null)
+  const dropIndicatorRef = useRef<HTMLDivElement>(null)
+  const dragFrameRef = useRef<number | null>(null)
+  const lastFrameTimeRef = useRef<number | null>(null)
 
   useEffect(() => {
     if (typeof chrome !== 'undefined' && chrome.topSites) {
@@ -140,174 +152,443 @@ export function Bookmarks({
   const scrollHintClass = (hint: ScrollHintState) =>
     `${hint.up ? ' scroll-hint-top' : ''}${hint.down ? ' scroll-hint-bottom' : ''}`
 
+  const setCancelZoneActive = (active: boolean) => {
+    if (cancelZoneActiveRef.current === active) return
+    cancelZoneActiveRef.current = active
+    setIsCancelZoneActive(active)
+  }
+
+  const targetsEqual = (a: DropTarget, b: DropTarget) => {
+    if (a === b) return true
+    if (!a || !b || a.type !== b.type) return false
+    if (a.type === 'category-slot' && b.type === 'category-slot') {
+      return a.index === b.index
+    }
+    if (a.type === 'bookmark-slot' && b.type === 'bookmark-slot') {
+      return a.categoryId === b.categoryId && a.index === b.index
+    }
+    return false
+  }
+
+  const updateDropIndicator = (geometry: DropIndicatorGeometry | null) => {
+    const element = dropIndicatorRef.current
+    if (!element) return
+
+    if (!geometry) {
+      element.style.opacity = '0'
+      return
+    }
+
+    element.style.left = `${geometry.left}px`
+    element.style.top = `${geometry.top}px`
+    element.style.width = `${geometry.width}px`
+    element.style.height = `${geometry.height}px`
+    element.style.opacity = '1'
+  }
+
+  const setValidTarget = (
+    target: Exclude<DropTarget, null>,
+    geometry: DropIndicatorGeometry
+  ) => {
+    lastValidTargetRef.current = target
+    if (!targetsEqual(dropTarget, target)) {
+      setDropTarget(target)
+    }
+    updateDropIndicator(geometry)
+  }
+
   const resetDragState = () => {
+    if (dragFrameRef.current !== null) {
+      cancelAnimationFrame(dragFrameRef.current)
+      dragFrameRef.current = null
+    }
+    lastFrameTimeRef.current = null
+    dragStateRef.current = null
+    lastValidTargetRef.current = null
+    cancelZoneActiveRef.current = false
     setDragState(null)
     setDropTarget(null)
+    setIsCancelZoneActive(false)
+    updateDropIndicator(null)
+    document.body.classList.remove('bookmark-pointer-drag-active')
   }
 
-  const autoScroll = (element: HTMLElement | null, clientY: number, threshold = 24) => {
-    if (!element || element.scrollHeight <= element.clientHeight) return
+  const pointInsideRect = (
+    point: PointerPosition,
+    rect: DOMRect,
+    padding = 0
+  ) =>
+    point.x >= rect.left - padding &&
+    point.x <= rect.right + padding &&
+    point.y >= rect.top - padding &&
+    point.y <= rect.bottom + padding
+
+  const squaredDistance = (
+    point: PointerPosition,
+    x: number,
+    y: number
+  ) => {
+    const dx = point.x - x
+    const dy = point.y - y
+    return dx * dx + dy * dy
+  }
+
+  const getCategorySlotGeometry = (
+    index: number,
+    elements: HTMLElement[],
+    gridRect: DOMRect
+  ): DropIndicatorGeometry | null => {
+    if (elements.length === 0) return null
+
+    const current = elements[Math.min(index, elements.length - 1)]?.getBoundingClientRect()
+    const previous = index > 0 ? elements[index - 1]?.getBoundingClientRect() : null
+
+    if (index === 0 && current) {
+      const fixedCategory = categoriesGridRef.current?.querySelector<HTMLElement>(
+        '[data-fixed-category="top-sites"]'
+      )
+      const fixedRect = fixedCategory?.getBoundingClientRect()
+
+      if (fixedRect && Math.abs(fixedRect.top - current.top) < 8) {
+        const x = (fixedRect.right + current.left) / 2
+        return { left: x - 1, top: current.top, width: 2, height: current.height }
+      }
+
+      const x = Math.max(gridRect.left + 1, current.left - 16)
+      return { left: x - 1, top: current.top, width: 2, height: current.height }
+    }
+
+    if (index === elements.length && previous) {
+      const x = Math.min(gridRect.right - 1, previous.right + 16)
+      return { left: x - 1, top: previous.top, width: 2, height: previous.height }
+    }
+
+    if (!previous || !current) return null
+
+    const sameRow = Math.abs(previous.top - current.top) < 8
+    if (sameRow) {
+      const x = (previous.right + current.left) / 2
+      const top = Math.min(previous.top, current.top)
+      const bottom = Math.max(previous.bottom, current.bottom)
+      return { left: x - 1, top, width: 2, height: Math.max(24, bottom - top) }
+    }
+
+    const y = (previous.bottom + current.top) / 2
+    return {
+      left: gridRect.left,
+      top: y - 1,
+      width: gridRect.width,
+      height: 2,
+    }
+  }
+
+  const updateCategoryTarget = (point: PointerPosition) => {
+    const grid = categoriesGridRef.current
+    if (!grid) return
+
+    const gridRect = grid.getBoundingClientRect()
+    if (!pointInsideRect(point, gridRect, 20)) return
+
+    const elements = Array.from(
+      grid.querySelectorAll<HTMLElement>('[data-user-category-index]')
+    ).sort(
+      (a, b) =>
+        Number(a.dataset.userCategoryIndex) - Number(b.dataset.userCategoryIndex)
+    )
+    if (elements.length === 0) return
+
+    let best:
+      | { index: number; geometry: DropIndicatorGeometry; distance: number }
+      | null = null
+
+    for (let index = 0; index <= elements.length; index += 1) {
+      const geometry = getCategorySlotGeometry(index, elements, gridRect)
+      if (!geometry) continue
+      const centerX = geometry.left + geometry.width / 2
+      const centerY = geometry.top + geometry.height / 2
+      const distance = squaredDistance(point, centerX, centerY)
+      if (!best || distance < best.distance) {
+        best = { index, geometry, distance }
+      }
+    }
+
+    if (best) {
+      setValidTarget(
+        { type: 'category-slot', index: best.index },
+        best.geometry
+      )
+    }
+  }
+
+  const getCategoryUnderPointer = (point: PointerPosition) => {
+    const grid = categoriesGridRef.current
+    if (!grid) return null
+
+    const categories = Array.from(
+      grid.querySelectorAll<HTMLElement>('[data-user-category-id]')
+    )
+
+    return categories.find(element =>
+      pointInsideRect(point, element.getBoundingClientRect(), 4)
+    ) ?? null
+  }
+
+  const getBookmarkSlotGeometry = (
+    list: HTMLElement,
+    index: number
+  ): DropIndicatorGeometry => {
+    const listRect = list.getBoundingClientRect()
+    const items = Array.from(
+      list.querySelectorAll<HTMLElement>('[data-bookmark-index]')
+    ).sort(
+      (a, b) => Number(a.dataset.bookmarkIndex) - Number(b.dataset.bookmarkIndex)
+    )
+
+    let y = listRect.top + 2
+    if (items.length === 0) {
+      y = listRect.top + Math.min(12, listRect.height / 2)
+    } else if (index <= 0) {
+      y = Math.max(listRect.top + 1, items[0].getBoundingClientRect().top - 1)
+    } else if (index >= items.length) {
+      y = Math.min(
+        listRect.bottom - 1,
+        items[items.length - 1].getBoundingClientRect().bottom + 1
+      )
+    } else {
+      const previous = items[index - 1].getBoundingClientRect()
+      const current = items[index].getBoundingClientRect()
+      y = (previous.bottom + current.top) / 2
+    }
+
+    return {
+      left: listRect.left,
+      top: y - 1,
+      width: listRect.width,
+      height: 2,
+    }
+  }
+
+  const updateBookmarkTarget = (point: PointerPosition) => {
+    const category = getCategoryUnderPointer(point)
+    if (!category) return
+
+    const categoryId = category.dataset.userCategoryId
+    if (!categoryId) return
+
+    const list = category.querySelector<HTMLElement>('[data-bookmark-list]')
+    if (!list) return
+
+    const items = Array.from(
+      list.querySelectorAll<HTMLElement>('[data-bookmark-index]')
+    ).sort(
+      (a, b) => Number(a.dataset.bookmarkIndex) - Number(b.dataset.bookmarkIndex)
+    )
+
+    let bestIndex = 0
+    let bestDistance = Number.POSITIVE_INFINITY
+
+    for (let index = 0; index <= items.length; index += 1) {
+      const geometry = getBookmarkSlotGeometry(list, index)
+      const y = geometry.top + geometry.height / 2
+      const distance = Math.abs(point.y - y)
+      if (distance < bestDistance) {
+        bestDistance = distance
+        bestIndex = index
+      }
+    }
+
+    setValidTarget(
+      { type: 'bookmark-slot', categoryId, index: bestIndex },
+      getBookmarkSlotGeometry(list, bestIndex)
+    )
+  }
+
+  const getEdgeScrollSpeed = (
+    element: HTMLElement,
+    point: PointerPosition,
+    threshold: number,
+    maxSpeed: number
+  ) => {
+    const maxScrollTop = element.scrollHeight - element.clientHeight
+    if (maxScrollTop <= 0) return 0
 
     const rect = element.getBoundingClientRect()
-    if (clientY < rect.top + threshold) {
-      element.scrollTop -= 8
-    } else if (clientY > rect.bottom - threshold) {
-      element.scrollTop += 8
-    }
-  }
-
-  const startCategoryDrag = (event: React.DragEvent<HTMLButtonElement>, categoryId: string) => {
-    if (editing.type) {
-      event.preventDefault()
-      return
+    if (
+      point.x < rect.left - 20 ||
+      point.x > rect.right + 20 ||
+      point.y < rect.top - 20 ||
+      point.y > rect.bottom + 20
+    ) {
+      return 0
     }
 
-    setDragState({ type: 'category', categoryId })
-    setDropTarget(null)
-    event.dataTransfer.effectAllowed = 'move'
-    event.dataTransfer.setData('text/plain', `category:${categoryId}`)
-
-    const dragImage = event.currentTarget.closest('.category-column') as HTMLElement | null
-    if (dragImage) {
-      event.dataTransfer.setDragImage(dragImage, 16, 16)
-    }
-  }
-
-  const startBookmarkDrag = (
-    event: React.DragEvent<HTMLButtonElement>,
-    categoryId: string,
-    bookmarkId: string
-  ) => {
-    if (editing.type) {
-      event.preventDefault()
-      return
+    if (point.y <= rect.top + threshold && element.scrollTop > 0) {
+      const distance = Math.max(0, point.y - rect.top)
+      const strength = Math.min(1, Math.max(0, 1 - distance / threshold))
+      return -(0.6 + strength * strength * maxSpeed)
     }
 
-    setDragState({ type: 'bookmark', categoryId, bookmarkId })
-    setDropTarget(null)
-    event.dataTransfer.effectAllowed = 'move'
-    event.dataTransfer.setData('text/plain', `bookmark:${categoryId}:${bookmarkId}`)
-
-    const dragImage = event.currentTarget.closest('.bookmark-item') as HTMLElement | null
-    if (dragImage) {
-      event.dataTransfer.setDragImage(dragImage, 12, 12)
+    if (
+      point.y >= rect.bottom - threshold &&
+      element.scrollTop < maxScrollTop - 1
+    ) {
+      const distance = Math.max(0, rect.bottom - point.y)
+      const strength = Math.min(1, Math.max(0, 1 - distance / threshold))
+      return 0.6 + strength * strength * maxSpeed
     }
+
+    return 0
   }
 
-  const handleCategoryDragOver = (
-    event: React.DragEvent<HTMLDivElement>,
-    categoryId: string
-  ) => {
-    if (dragState?.type !== 'category' || dragState.categoryId === categoryId) return
+  const updateCancelZoneFromPointer = (point: PointerPosition) => {
+    const cancelZone = cancelZoneRef.current
+    if (!cancelZone) {
+      setCancelZoneActive(false)
+      return false
+    }
 
-    event.preventDefault()
-    event.dataTransfer.dropEffect = 'move'
-    autoScroll(categoriesGridRef.current, event.clientY, 36)
-
-    const rect = event.currentTarget.getBoundingClientRect()
-    const centerX = rect.left + rect.width / 2
-    const centerY = rect.top + rect.height / 2
-    const nearSameRow = Math.abs(event.clientY - centerY) < rect.height * 0.3
-    const position =
-      nearSameRow
-        ? event.clientX < centerX ? 'before' : 'after'
-        : event.clientY < centerY ? 'before' : 'after'
-
-    setDropTarget({ type: 'category', categoryId, position })
+    const active = pointInsideRect(point, cancelZone.getBoundingClientRect())
+    setCancelZoneActive(active)
+    return active
   }
 
-  const handleCategoryDrop = (
-    event: React.DragEvent<HTMLDivElement>,
-    categoryId: string
-  ) => {
-    if (dragState?.type !== 'category' || dragState.categoryId === categoryId) return
-
-    event.preventDefault()
-    const target =
-      dropTarget?.type === 'category' && dropTarget.categoryId === categoryId
-        ? dropTarget
-        : { type: 'category' as const, categoryId, position: 'before' as const }
-
-    onReorderCategories(dragState.categoryId, categoryId, target.position)
-    resetDragState()
+  const updateDragOverlay = (point: PointerPosition) => {
+    const overlay = dragOverlayRef.current
+    if (!overlay) return
+    overlay.style.transform = `translate3d(${point.x + 14}px, ${point.y + 14}px, 0)`
   }
 
-  const handleBookmarkDragOver = (
-    event: React.DragEvent<HTMLDivElement>,
-    categoryId: string,
-    bookmarkId: string
-  ) => {
-    if (dragState?.type !== 'bookmark') return
+  const runDragFrame = (timestamp: number) => {
+    const activeDrag = dragStateRef.current
+    if (!activeDrag) return
 
-    event.preventDefault()
-    event.stopPropagation()
-    event.dataTransfer.dropEffect = 'move'
+    const point = pointerRef.current
+    updateDragOverlay(point)
 
-    const list = event.currentTarget.closest('.bookmarks-list') as HTMLElement | null
-    autoScroll(list, event.clientY, 18)
-    autoScroll(categoriesGridRef.current, event.clientY, 36)
+    const inCancelZone = updateCancelZoneFromPointer(point)
+    const previousTime = lastFrameTimeRef.current ?? timestamp
+    const frameScale = Math.min(2, Math.max(0.5, (timestamp - previousTime) / 16.67))
+    lastFrameTimeRef.current = timestamp
 
-    const rect = event.currentTarget.getBoundingClientRect()
-    const position = event.clientY < rect.top + rect.height / 2 ? 'before' : 'after'
-    setDropTarget({ type: 'bookmark', categoryId, bookmarkId, position })
+    if (!inCancelZone) {
+      let innerScrolling = false
+
+      if (activeDrag.type === 'bookmark') {
+        const category = getCategoryUnderPointer(point)
+        const list = category?.querySelector<HTMLElement>('[data-bookmark-list]') ?? null
+        if (list) {
+          const innerSpeed = getEdgeScrollSpeed(list, point, 20, 7.5)
+          if (innerSpeed !== 0) {
+            list.scrollTop += innerSpeed * frameScale
+            innerScrolling = true
+          }
+        }
+      }
+
+      const grid = categoriesGridRef.current
+      if (grid && !innerScrolling) {
+        const outerSpeed = getEdgeScrollSpeed(grid, point, 42, 10)
+        if (outerSpeed !== 0) {
+          grid.scrollTop += outerSpeed * frameScale
+        }
+      }
+
+      if (activeDrag.type === 'category') {
+        updateCategoryTarget(point)
+      } else {
+        updateBookmarkTarget(point)
+      }
+    }
+
+    dragFrameRef.current = requestAnimationFrame(runDragFrame)
   }
 
-  const handleBookmarkDrop = (
-    event: React.DragEvent<HTMLDivElement>,
-    categoryId: string,
-    bookmarkId: string
+  const startPointerDrag = (
+    event: React.PointerEvent<HTMLButtonElement>,
+    drag: Exclude<DragState, null>,
+    initialTarget: Exclude<DropTarget, null>
   ) => {
-    if (dragState?.type !== 'bookmark') return
+    if (editing.type || event.button !== 0) return
 
     event.preventDefault()
     event.stopPropagation()
 
-    const target =
-      dropTarget?.type === 'bookmark' &&
-      dropTarget.categoryId === categoryId &&
-      dropTarget.bookmarkId === bookmarkId
-        ? dropTarget
-        : { type: 'bookmark' as const, categoryId, bookmarkId, position: 'before' as const }
+    pointerRef.current = { x: event.clientX, y: event.clientY }
+    dragStateRef.current = drag
+    lastValidTargetRef.current = initialTarget
+    setDragState(drag)
+    setDropTarget(initialTarget)
+    setCancelZoneActive(false)
+    document.body.classList.add('bookmark-pointer-drag-active')
 
-    onMoveBookmark(
-      dragState.bookmarkId,
-      dragState.categoryId,
-      categoryId,
-      bookmarkId,
-      target.position
-    )
+    requestAnimationFrame(() => {
+      updateDragOverlay(pointerRef.current)
+      if (drag.type === 'category') {
+        updateCategoryTarget(pointerRef.current)
+      } else {
+        updateBookmarkTarget(pointerRef.current)
+      }
+    })
+  }
+
+  const finishPointerDrag = (cancel = false) => {
+    const activeDrag = dragStateRef.current
+    if (!activeDrag) return
+
+    const target = lastValidTargetRef.current
+    if (!cancel && !cancelZoneActiveRef.current && target) {
+      if (activeDrag.type === 'category' && target.type === 'category-slot') {
+        onReorderCategories(activeDrag.categoryId, target.index)
+      } else if (
+        activeDrag.type === 'bookmark' &&
+        target.type === 'bookmark-slot'
+      ) {
+        onMoveBookmark(
+          activeDrag.bookmarkId,
+          activeDrag.categoryId,
+          target.categoryId,
+          target.index
+        )
+      }
+    }
+
     resetDragState()
   }
 
-  const handleBookmarkListDragOver = (
-    event: React.DragEvent<HTMLDivElement>,
-    categoryId: string
-  ) => {
-    if (dragState?.type !== 'bookmark') return
+  useEffect(() => {
+    if (!dragState) return
 
-    event.preventDefault()
-    event.dataTransfer.dropEffect = 'move'
-    autoScroll(event.currentTarget, event.clientY, 18)
-    autoScroll(categoriesGridRef.current, event.clientY, 36)
-    setDropTarget({ type: 'bookmark', categoryId, position: 'after' })
-  }
+    const handlePointerMove = (event: PointerEvent) => {
+      pointerRef.current = { x: event.clientX, y: event.clientY }
+      if (event.cancelable) event.preventDefault()
+    }
 
-  const handleBookmarkListDrop = (
-    event: React.DragEvent<HTMLDivElement>,
-    categoryId: string
-  ) => {
-    if (dragState?.type !== 'bookmark') return
+    const handlePointerUp = (event: PointerEvent) => {
+      pointerRef.current = { x: event.clientX, y: event.clientY }
+      updateCancelZoneFromPointer(pointerRef.current)
+      finishPointerDrag(false)
+    }
 
-    event.preventDefault()
-    onMoveBookmark(
-      dragState.bookmarkId,
-      dragState.categoryId,
-      categoryId,
-      undefined,
-      'after'
-    )
-    resetDragState()
-  }
+    const handlePointerCancel = () => finishPointerDrag(true)
+
+    window.addEventListener('pointermove', handlePointerMove, { passive: false })
+    window.addEventListener('pointerup', handlePointerUp, true)
+    window.addEventListener('pointercancel', handlePointerCancel, true)
+
+    lastFrameTimeRef.current = null
+    dragFrameRef.current = requestAnimationFrame(runDragFrame)
+
+    return () => {
+      window.removeEventListener('pointermove', handlePointerMove)
+      window.removeEventListener('pointerup', handlePointerUp, true)
+      window.removeEventListener('pointercancel', handlePointerCancel, true)
+      if (dragFrameRef.current !== null) {
+        cancelAnimationFrame(dragFrameRef.current)
+        dragFrameRef.current = null
+      }
+    }
+  }, [dragState])
+
 
   useEffect(() => {
     const element = categoriesGridRef.current
