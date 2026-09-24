@@ -531,11 +531,17 @@ export function Bookmarks({
           slotLayer.querySelectorAll<HTMLElement>('[data-drop-slot-key]')
         ).map(element => [element.dataset.dropSlotKey, element])
       )
+      const visibleKeys = new Set(visuals.map(visual => visual.key))
+
+      for (const [key, element] of slotElements) {
+        element.style.display = key && visibleKeys.has(key) ? '' : 'none'
+      }
 
       for (const visual of visuals) {
         const element = slotElements.get(visual.key)
         if (!element) continue
 
+        element.style.display = ''
         element.style.left = `${visual.geometry.left}px`
         element.style.top = `${visual.geometry.top}px`
         element.style.width = `${visual.geometry.width}px`
