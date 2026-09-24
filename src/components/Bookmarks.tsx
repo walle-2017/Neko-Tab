@@ -475,6 +475,10 @@ export function Bookmarks({
     const movedEnough =
       squaredDistance(point, dragStartPointRef.current.x, dragStartPointRef.current.y) > 16
 
+    if (inCancelZone) {
+      updateDropIndicator(null)
+    }
+
     if (!inCancelZone && movedEnough) {
       let innerScrolling = false
 
@@ -572,10 +576,12 @@ export function Bookmarks({
     }
 
     const handlePointerCancel = () => finishPointerDrag(true)
+    const handleWindowBlur = () => finishPointerDrag(false)
 
     window.addEventListener('pointermove', handlePointerMove, { passive: false })
     window.addEventListener('pointerup', handlePointerUp, true)
     window.addEventListener('pointercancel', handlePointerCancel, true)
+    window.addEventListener('blur', handleWindowBlur)
 
     lastFrameTimeRef.current = null
     dragFrameRef.current = requestAnimationFrame(runDragFrame)
@@ -584,6 +590,7 @@ export function Bookmarks({
       window.removeEventListener('pointermove', handlePointerMove)
       window.removeEventListener('pointerup', handlePointerUp, true)
       window.removeEventListener('pointercancel', handlePointerCancel, true)
+      window.removeEventListener('blur', handleWindowBlur)
       if (dragFrameRef.current !== null) {
         cancelAnimationFrame(dragFrameRef.current)
         dragFrameRef.current = null
@@ -788,7 +795,9 @@ export function Bookmarks({
             className={[
               'category-column',
               dragState?.type === 'category' && dragState.categoryId === cat.id ? 'is-dragging' : '',
-              dropTarget?.type === 'bookmark-slot' && dropTarget.categoryId === cat.id
+              !isCancelZoneActive &&
+              dropTarget?.type === 'bookmark-slot' &&
+              dropTarget.categoryId === cat.id
                 ? 'bookmark-drop-category'
                 : '',
             ].filter(Boolean).join(' ')}
