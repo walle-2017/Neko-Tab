@@ -30,9 +30,3 @@ jobs:
 
       - name: Run Build
         run: npm run build
-      - name: Upload border-slot test package
-        uses: actions/upload-artifact@v4
-        with:
-          name: neko-tab-border-slot-test
-          path: dist/
-          if-no-files-found: error
