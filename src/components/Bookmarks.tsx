@@ -1183,7 +1183,11 @@ export function Bookmarks({
             {dropSlotVisuals.map(visual => (
               <div
                 key={visual.key}
-                className="drag-drop-slot-hint"
+                className={`drag-drop-slot-hint ${
+                  visual.geometry.height > visual.geometry.width
+                    ? 'drag-drop-slot-hint-vertical'
+                    : 'drag-drop-slot-hint-horizontal'
+                }`}
                 style={{
                   left: visual.geometry.left,
                   top: visual.geometry.top,
