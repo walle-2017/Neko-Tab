@@ -510,6 +510,33 @@
   flex: 0 0 auto;
 }
 
+.drag-handle {
+  cursor: grab;
+  touch-action: none;
+}
+
+.drag-handle:active {
+  cursor: grabbing;
+}
+
+.category-column.is-dragging,
+.bookmark-item.is-dragging {
+  opacity: 0.28;
+}
+
+.category-column.category-drop-before {
+  box-shadow: inset 2px 0 0 var(--accent, var(--cyan-accent));
+}
+
+.category-column.category-drop-after {
+  box-shadow: inset -2px 0 0 var(--accent, var(--cyan-accent));
+}
+
+.category-column.bookmark-drop-category {
+  outline: 1px solid color-mix(in srgb, var(--accent, var(--cyan-accent)) 55%, transparent);
+  outline-offset: 3px;
+}
+
 /* Action buttons - rectangular with 0 radius */
 .action-btn {
   background: none;
@@ -629,6 +656,36 @@
   gap: var(--spacing-xs);
   padding: 1px 0;
   min-width: 0;
+  position: relative;
+}
+
+.bookmark-item.bookmark-drop-before::before,
+.bookmark-item.bookmark-drop-after::after,
+.bookmarks-list.bookmark-list-drop-end::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: var(--accent, var(--cyan-accent));
+  pointer-events: none;
+  z-index: 2;
+}
+
+.bookmark-item.bookmark-drop-before::before {
+  top: -1px;
+}
+
+.bookmark-item.bookmark-drop-after::after {
+  bottom: -1px;
+}
+
+.bookmarks-list {
+  position: relative;
+}
+
+.bookmarks-list.bookmark-list-drop-end::after {
+  bottom: 0;
 }
 
 .bookmark-link {
