@@ -756,7 +756,7 @@ export function Bookmarks({
           }}
         >
         {topSites.length > 0 && (
-          <div className="category-column">
+          <div className="category-column" data-fixed-category="top-sites">
             <div className="category-header">
               <span className="category-name">Frequently Visited</span>
             </div>
@@ -780,21 +780,18 @@ export function Bookmarks({
             </div>
           </div>
         )}
-        {categories.map(cat => (
+        {categories.map((cat, categoryIndex) => (
           <div 
             key={cat.id}
+            data-user-category-id={cat.id}
+            data-user-category-index={categoryIndex}
             className={[
               'category-column',
               dragState?.type === 'category' && dragState.categoryId === cat.id ? 'is-dragging' : '',
-              dropTarget?.type === 'category' && dropTarget.categoryId === cat.id
-                ? `category-drop-${dropTarget.position}`
-                : '',
-              dropTarget?.type === 'bookmark' && dropTarget.categoryId === cat.id
+              dropTarget?.type === 'bookmark-slot' && dropTarget.categoryId === cat.id
                 ? 'bookmark-drop-category'
                 : '',
             ].filter(Boolean).join(' ')}
-            onDragOver={(event) => handleCategoryDragOver(event, cat.id)}
-            onDrop={(event) => handleCategoryDrop(event, cat.id)}
           >
             <div className="category-header">
               {editing.type === 'category' && editing.categoryId === cat.id ? (
@@ -823,9 +820,13 @@ export function Bookmarks({
                 <div className="category-actions">
                   <button
                     className="action-btn-mini drag-handle"
-                    draggable={!editing.type}
-                    onDragStart={(event) => startCategoryDrag(event, cat.id)}
-                    onDragEnd={resetDragState}
+                    onPointerDown={(event) =>
+                      startPointerDrag(
+                        event,
+                        { type: 'category', categoryId: cat.id, label: cat.name },
+                        { type: 'category-slot', index: categoryIndex }
+                      )
+                    }
                     title="Drag to reorder category"
                     aria-label={`Reorder ${cat.name} category`}
                   >
@@ -858,25 +859,18 @@ export function Bookmarks({
             
             <div className={`bookmark-list-shell${cat.bookmarks.length > 4 ? ' bookmark-list-shell-scrollable' : ''}`}>
               <div
-                className={`bookmarks-list bookmarks-list-fixed${cat.bookmarks.length > 4 ? ` bookmarks-list-scrollable${scrollHintClass(bookmarkScrollHints[cat.id] ?? { up: false, down: true })}` : ''}${editing.categoryId === cat.id && (editing.type === 'bookmark' || editing.type === 'new-bookmark') ? ' bookmarks-list-editing' : ''}${dropTarget?.type === 'bookmark' && dropTarget.categoryId === cat.id && !dropTarget.bookmarkId ? ' bookmark-list-drop-end' : ''}`}
+                data-bookmark-list
+                className={`bookmarks-list bookmarks-list-fixed${cat.bookmarks.length > 4 ? ` bookmarks-list-scrollable${scrollHintClass(bookmarkScrollHints[cat.id] ?? { up: false, down: true })}` : ''}${editing.categoryId === cat.id && (editing.type === 'bookmark' || editing.type === 'new-bookmark') ? ' bookmarks-list-editing' : ''}`}
                 onScroll={cat.bookmarks.length > 4 ? (event) => handleBookmarkScroll(cat.id, event) : undefined}
-                onDragOver={(event) => handleBookmarkListDragOver(event, cat.id)}
-                onDrop={(event) => handleBookmarkListDrop(event, cat.id)}
               >
-              {cat.bookmarks.map(bookmark => (
+              {cat.bookmarks.map((bookmark, bookmarkIndex) => (
                 <div
                   key={bookmark.id}
+                  data-bookmark-index={bookmarkIndex}
                   className={[
                     'bookmark-item',
                     dragState?.type === 'bookmark' && dragState.bookmarkId === bookmark.id ? 'is-dragging' : '',
-                    dropTarget?.type === 'bookmark' &&
-                    dropTarget.categoryId === cat.id &&
-                    dropTarget.bookmarkId === bookmark.id
-                      ? `bookmark-drop-${dropTarget.position}`
-                      : '',
                   ].filter(Boolean).join(' ')}
-                  onDragOver={(event) => handleBookmarkDragOver(event, cat.id, bookmark.id)}
-                  onDrop={(event) => handleBookmarkDrop(event, cat.id, bookmark.id)}
                 >
                   {editing.type === 'bookmark' && editing.bookmarkId === bookmark.id ? (
                     <div className="bookmark-edit-form">
@@ -918,9 +912,22 @@ export function Bookmarks({
                         <div className="bookmark-actions">
                           <button
                             className="action-btn-mini drag-handle"
-                            draggable={!editing.type}
-                            onDragStart={(event) => startBookmarkDrag(event, cat.id, bookmark.id)}
-                            onDragEnd={resetDragState}
+                            onPointerDown={(event) =>
+                              startPointerDrag(
+                                event,
+                                {
+                                  type: 'bookmark',
+                                  categoryId: cat.id,
+                                  bookmarkId: bookmark.id,
+                                  label: bookmark.title,
+                                },
+                                {
+                                  type: 'bookmark-slot',
+                                  categoryId: cat.id,
+                                  index: bookmarkIndex,
+                                }
+                              )
+                            }
                             title="Drag to reorder bookmark"
                             aria-label={`Reorder ${bookmark.title}`}
                           >
@@ -991,6 +998,33 @@ export function Bookmarks({
           {categoryScrollHint.down && <ChevronDown size={16} />}
         </div>
       </div>
+
+      {dragState && (
+        <>
+          <div
+            ref={dropIndicatorRef}
+            className="drag-drop-indicator"
+            aria-hidden="true"
+          />
+          <div
+            ref={dragOverlayRef}
+            className="bookmark-drag-overlay"
+            aria-hidden="true"
+          >
+            <GripVertical size={12} />
+            <span>{dragState.label}</span>
+          </div>
+          <div
+            ref={cancelZoneRef}
+            className={`bookmark-drag-cancel-zone${isCancelZoneActive ? ' is-active' : ''}`}
+            onPointerEnter={() => setCancelZoneActive(true)}
+            onPointerLeave={() => setCancelZoneActive(false)}
+          >
+            <X size={14} />
+            <span>{isCancelZoneActive ? 'RELEASE TO CANCEL' : 'DROP HERE TO CANCEL'}</span>
+          </div>
+        </>
+      )}
     </div>
   )
 }
