@@ -59,6 +59,12 @@ interface DropIndicatorGeometry {
   height: number
 }
 
+interface DropSlotVisual {
+  key: string
+  target: Exclude<DropTarget, null>
+  geometry: DropIndicatorGeometry
+}
+
 export function Bookmarks({
   categories,
   onAddCategory,
@@ -88,6 +94,7 @@ export function Bookmarks({
   const [bookmarkScrollHints, setBookmarkScrollHints] = useState<Record<string, ScrollHintState>>({})
   const [dragState, setDragState] = useState<DragState>(null)
   const [dropTarget, setDropTarget] = useState<DropTarget>(null)
+  const [dropSlotVisuals, setDropSlotVisuals] = useState<DropSlotVisual[]>([])
   const [isCancelZoneActive, setIsCancelZoneActive] = useState(false)
   const dragStateRef = useRef<DragState>(null)
   const lastValidTargetRef = useRef<DropTarget>(null)
@@ -99,6 +106,7 @@ export function Bookmarks({
   const dropIndicatorRef = useRef<HTMLDivElement>(null)
   const dragFrameRef = useRef<number | null>(null)
   const lastFrameTimeRef = useRef<number | null>(null)
+  const dropSlotFingerprintRef = useRef('')
 
   useEffect(() => {
     if (typeof chrome !== 'undefined' && chrome.topSites) {
@@ -210,6 +218,8 @@ export function Bookmarks({
     cancelZoneActiveRef.current = false
     setDragState(null)
     setDropTarget(null)
+    setDropSlotVisuals([])
+    dropSlotFingerprintRef.current = ''
     setIsCancelZoneActive(false)
     updateDropIndicator(null)
     document.body.classList.remove('bookmark-pointer-drag-active')
@@ -235,53 +245,131 @@ export function Bookmarks({
     return dx * dx + dy * dy
   }
 
-  const getCategorySlotGeometry = (
-    index: number,
-    elements: HTMLElement[],
-    gridRect: DOMRect
-  ): DropIndicatorGeometry | null => {
-    if (elements.length === 0) return null
+  const getUserCategoryElements = () => {
+    const grid = categoriesGridRef.current
+    if (!grid) return []
 
-    const current = elements[Math.min(index, elements.length - 1)]?.getBoundingClientRect()
-    const previous = index > 0 ? elements[index - 1]?.getBoundingClientRect() : null
+    return Array.from(
+      grid.querySelectorAll<HTMLElement>('[data-user-category-index]')
+    ).sort(
+      (a, b) =>
+        Number(a.dataset.userCategoryIndex) - Number(b.dataset.userCategoryIndex)
+    )
+  }
 
-    if (index === 0 && current) {
-      const fixedCategory = categoriesGridRef.current?.querySelector<HTMLElement>(
-        '[data-fixed-category="top-sites"]'
-      )
-      const fixedRect = fixedCategory?.getBoundingClientRect()
+  const getCategoryRows = (elements: HTMLElement[]) => {
+    const rows: HTMLElement[][] = []
 
-      if (fixedRect && Math.abs(fixedRect.top - current.top) < 8) {
-        const x = (fixedRect.right + current.left) / 2
-        return { left: x - 1, top: current.top, width: 2, height: current.height }
+    for (const element of elements) {
+      const rect = element.getBoundingClientRect()
+      const currentRow = rows[rows.length - 1]
+      if (!currentRow) {
+        rows.push([element])
+        continue
       }
 
-      const x = Math.max(gridRect.left + 1, current.left - 16)
-      return { left: x - 1, top: current.top, width: 2, height: current.height }
+      const rowTop = currentRow[0].getBoundingClientRect().top
+      if (Math.abs(rect.top - rowTop) < 8) {
+        currentRow.push(element)
+      } else {
+        rows.push([element])
+      }
     }
 
-    if (index === elements.length && previous) {
-      const x = Math.min(gridRect.right - 1, previous.right + 16)
-      return { left: x - 1, top: previous.top, width: 2, height: previous.height }
-    }
+    return rows
+  }
 
-    if (!previous || !current) return null
+  const getVerticalCategorySlotGeometry = (
+    x: number,
+    top: number,
+    bottom: number
+  ): DropIndicatorGeometry => ({
+    left: x - 1,
+    top,
+    width: 2,
+    height: Math.max(24, bottom - top),
+  })
 
-    const sameRow = Math.abs(previous.top - current.top) < 8
-    if (sameRow) {
-      const x = (previous.right + current.left) / 2
-      const top = Math.min(previous.top, current.top)
-      const bottom = Math.max(previous.bottom, current.bottom)
-      return { left: x - 1, top, width: 2, height: Math.max(24, bottom - top) }
-    }
+  const getCategorySlotVisuals = (): DropSlotVisual[] => {
+    const grid = categoriesGridRef.current
+    if (!grid) return []
 
-    const y = (previous.bottom + current.top) / 2
-    return {
-      left: gridRect.left,
-      top: y - 1,
-      width: gridRect.width,
-      height: 2,
-    }
+    const elements = getUserCategoryElements()
+    if (elements.length === 0) return []
+
+    const rows = getCategoryRows(elements)
+    const gridRect = grid.getBoundingClientRect()
+    const visuals: DropSlotVisual[] = []
+
+    rows.forEach((row, rowIndex) => {
+      const first = row[0]
+      const last = row[row.length - 1]
+      const firstRect = first.getBoundingClientRect()
+      const lastRect = last.getBoundingClientRect()
+      const firstIndex = Number(first.dataset.userCategoryIndex)
+      const lastIndex = Number(last.dataset.userCategoryIndex)
+
+      const previousVisualSibling =
+        first.previousElementSibling instanceof HTMLElement
+          ? first.previousElementSibling
+          : null
+      const previousRect = previousVisualSibling?.getBoundingClientRect()
+      const leftX =
+        previousRect && Math.abs(previousRect.top - firstRect.top) < 8
+          ? (previousRect.right + firstRect.left) / 2
+          : Math.max(gridRect.left + 1, firstRect.left - 16)
+
+      visuals.push({
+        key: `category-row-${rowIndex}-start-${firstIndex}`,
+        target: { type: 'category-slot', index: firstIndex },
+        geometry: getVerticalCategorySlotGeometry(
+          leftX,
+          firstRect.top,
+          firstRect.bottom
+        ),
+      })
+
+      for (let itemIndex = 1; itemIndex < row.length; itemIndex += 1) {
+        const previous = row[itemIndex - 1]
+        const current = row[itemIndex]
+        const previousRect = previous.getBoundingClientRect()
+        const currentRect = current.getBoundingClientRect()
+        const currentIndex = Number(current.dataset.userCategoryIndex)
+        const x = (previousRect.right + currentRect.left) / 2
+
+        visuals.push({
+          key: `category-row-${rowIndex}-between-${currentIndex}`,
+          target: { type: 'category-slot', index: currentIndex },
+          geometry: getVerticalCategorySlotGeometry(
+            x,
+            Math.min(previousRect.top, currentRect.top),
+            Math.max(previousRect.bottom, currentRect.bottom)
+          ),
+        })
+      }
+
+      const nextVisualSibling =
+        last.nextElementSibling instanceof HTMLElement
+          ? last.nextElementSibling
+          : null
+      const nextRect = nextVisualSibling?.getBoundingClientRect()
+      const rightX =
+        nextRect && Math.abs(nextRect.top - lastRect.top) < 8
+          ? (lastRect.right + nextRect.left) / 2
+          : Math.min(gridRect.right - 1, lastRect.right + 16)
+
+      visuals.push({
+        key: `category-row-${rowIndex}-end-${lastIndex + 1}`,
+        target: { type: 'category-slot', index: lastIndex + 1 },
+        geometry: getVerticalCategorySlotGeometry(
+          rightX,
+          lastRect.top,
+          lastRect.bottom
+        ),
+      })
+    })
+
+    return visuals
   }
 
   const updateCategoryTarget = (point: PointerPosition) => {
@@ -291,34 +379,26 @@ export function Bookmarks({
     const gridRect = grid.getBoundingClientRect()
     if (!pointInsideRect(point, gridRect, 20)) return
 
-    const elements = Array.from(
-      grid.querySelectorAll<HTMLElement>('[data-user-category-index]')
-    ).sort(
-      (a, b) =>
-        Number(a.dataset.userCategoryIndex) - Number(b.dataset.userCategoryIndex)
-    )
-    if (elements.length === 0) return
-
+    const visuals = getCategorySlotVisuals()
     let best:
-      | { index: number; geometry: DropIndicatorGeometry; distance: number }
+      | { target: Exclude<DropTarget, null>; geometry: DropIndicatorGeometry; distance: number }
       | null = null
 
-    for (let index = 0; index <= elements.length; index += 1) {
-      const geometry = getCategorySlotGeometry(index, elements, gridRect)
-      if (!geometry) continue
-      const centerX = geometry.left + geometry.width / 2
-      const centerY = geometry.top + geometry.height / 2
+    for (const visual of visuals) {
+      const centerX = visual.geometry.left + visual.geometry.width / 2
+      const centerY = visual.geometry.top + visual.geometry.height / 2
       const distance = squaredDistance(point, centerX, centerY)
       if (!best || distance < best.distance) {
-        best = { index, geometry, distance }
+        best = {
+          target: visual.target,
+          geometry: visual.geometry,
+          distance,
+        }
       }
     }
 
     if (best) {
-      setValidTarget(
-        { type: 'category-slot', index: best.index },
-        best.geometry
-      )
+      setValidTarget(best.target, best.geometry)
     }
   }
 
@@ -370,6 +450,62 @@ export function Bookmarks({
     }
   }
 
+
+  const getBookmarkSlotVisuals = (): DropSlotVisual[] => {
+    const grid = categoriesGridRef.current
+    if (!grid) return []
+
+    const categories = Array.from(
+      grid.querySelectorAll<HTMLElement>('[data-user-category-id]')
+    )
+    const visuals: DropSlotVisual[] = []
+
+    categories.forEach(category => {
+      const categoryId = category.dataset.userCategoryId
+      const list = category.querySelector<HTMLElement>('[data-bookmark-list]')
+      if (!categoryId || !list) return
+
+      const items = Array.from(
+        list.querySelectorAll<HTMLElement>('[data-bookmark-index]')
+      )
+      const count = items.length
+
+      for (let index = 0; index <= count; index += 1) {
+        visuals.push({
+          key: `bookmark-${categoryId}-slot-${index}`,
+          target: { type: 'bookmark-slot', categoryId, index },
+          geometry: getBookmarkSlotGeometry(list, index),
+        })
+      }
+    })
+
+    return visuals
+  }
+
+  const refreshDropSlotVisuals = (activeDrag: Exclude<DragState, null>) => {
+    const visuals =
+      activeDrag.type === 'category'
+        ? getCategorySlotVisuals()
+        : getBookmarkSlotVisuals()
+
+    const fingerprint = visuals
+      .map(visual => {
+        const { left, top, width, height } = visual.geometry
+        return [
+          visual.key,
+          Math.round(left),
+          Math.round(top),
+          Math.round(width),
+          Math.round(height),
+        ].join(':')
+      })
+      .join('|')
+
+    if (fingerprint !== dropSlotFingerprintRef.current) {
+      dropSlotFingerprintRef.current = fingerprint
+      setDropSlotVisuals(visuals)
+    }
+  }
   const updateBookmarkTarget = (point: PointerPosition) => {
     const category = getCategoryUnderPointer(point)
     if (!category) return
@@ -475,6 +611,8 @@ export function Bookmarks({
     const movedEnough =
       squaredDistance(point, dragStartPointRef.current.x, dragStartPointRef.current.y) > 16
 
+    refreshDropSlotVisuals(activeDrag)
+
     if (inCancelZone) {
       updateDropIndicator(null)
     }
@@ -528,6 +666,8 @@ export function Bookmarks({
     lastValidTargetRef.current = initialTarget
     setDragState(drag)
     setDropTarget(initialTarget)
+    setDropSlotVisuals([])
+    dropSlotFingerprintRef.current = ''
     setCancelZoneActive(false)
     document.body.classList.add('bookmark-pointer-drag-active')
 
@@ -729,7 +869,7 @@ export function Bookmarks({
   }, [isEditMode, editing, dragState])
 
   return (
-    <div className="bookmarks-container">
+    <div className={`bookmarks-container${dragState ? ' is-pointer-dragging' : ''}`}>
       <div className="bookmarks-header">
         <div 
           className="bookmarks-toggle"
@@ -738,14 +878,27 @@ export function Bookmarks({
           {showBookmarks ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
           <h3 className="quick-links-title">QUICK LINKS</h3>
         </div>
-        <button 
-          className="action-btn-mini"
-          style={{ opacity: isEditMode ? 1 : 0.5 }}
-          onClick={handleEditModeToggle}
-          title={isEditMode ? "Done editing" : "Edit bookmarks"}
-        >
-          {isEditMode ? <Check size={14} /> : <Pencil size={14} />}
-        </button>
+        <div className="bookmarks-header-actions">
+          {dragState && (
+            <div
+              ref={cancelZoneRef}
+              className={`bookmark-drag-cancel-zone${isCancelZoneActive ? ' is-active' : ''}`}
+              onPointerEnter={() => setCancelZoneActive(true)}
+              onPointerLeave={() => setCancelZoneActive(false)}
+            >
+              <X size={12} />
+              <span>{isCancelZoneActive ? 'RELEASE TO CANCEL' : 'CANCEL DROP'}</span>
+            </div>
+          )}
+          <button 
+            className="action-btn-mini"
+            style={{ opacity: isEditMode ? 1 : 0.5 }}
+            onClick={handleEditModeToggle}
+            title={isEditMode ? "Done editing" : "Edit bookmarks"}
+          >
+            {isEditMode ? <Check size={14} /> : <Pencil size={14} />}
+          </button>
+        </div>
       </div>
 
       <div className="categories-scroll-shell">
@@ -1010,6 +1163,20 @@ export function Bookmarks({
 
       {dragState && (
         <>
+          <div className="drag-drop-slot-layer" aria-hidden="true">
+            {dropSlotVisuals.map(visual => (
+              <div
+                key={visual.key}
+                className="drag-drop-slot-hint"
+                style={{
+                  left: visual.geometry.left,
+                  top: visual.geometry.top,
+                  width: visual.geometry.width,
+                  height: visual.geometry.height,
+                }}
+              />
+            ))}
+          </div>
           <div
             ref={dropIndicatorRef}
             className="drag-drop-indicator"
@@ -1022,15 +1189,6 @@ export function Bookmarks({
           >
             <GripVertical size={12} />
             <span>{dragState.label}</span>
-          </div>
-          <div
-            ref={cancelZoneRef}
-            className={`bookmark-drag-cancel-zone${isCancelZoneActive ? ' is-active' : ''}`}
-            onPointerEnter={() => setCancelZoneActive(true)}
-            onPointerLeave={() => setCancelZoneActive(false)}
-          >
-            <X size={14} />
-            <span>{isCancelZoneActive ? 'RELEASE TO CANCEL' : 'DROP HERE TO CANCEL'}</span>
           </div>
         </>
       )}
