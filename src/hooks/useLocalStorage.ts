@@ -247,6 +247,77 @@ export function useBookmarks() {
     ))
   }, [setCategories])
 
+  const reorderCategories = useCallback((
+    activeCategoryId: string,
+    overCategoryId: string,
+    position: 'before' | 'after'
+  ) => {
+    if (activeCategoryId === overCategoryId) return
+
+    setCategories(prev => {
+      const activeIndex = prev.findIndex(cat => cat.id === activeCategoryId)
+      const overIndex = prev.findIndex(cat => cat.id === overCategoryId)
+      if (activeIndex < 0 || overIndex < 0) return prev
+
+      const next = [...prev]
+      const [activeCategory] = next.splice(activeIndex, 1)
+      const nextOverIndex = next.findIndex(cat => cat.id === overCategoryId)
+      const insertIndex = Math.min(
+        next.length,
+        nextOverIndex + (position === 'after' ? 1 : 0)
+      )
+
+      next.splice(insertIndex, 0, activeCategory)
+      return next
+    })
+  }, [setCategories])
+
+  const moveBookmark = useCallback((
+    bookmarkId: string,
+    sourceCategoryId: string,
+    targetCategoryId: string,
+    targetBookmarkId?: string,
+    position: 'before' | 'after' = 'before'
+  ) => {
+    if (
+      sourceCategoryId === targetCategoryId &&
+      targetBookmarkId === bookmarkId
+    ) {
+      return
+    }
+
+    setCategories(prev => {
+      const next = prev.map(cat => ({
+        ...cat,
+        bookmarks: [...cat.bookmarks],
+      }))
+
+      const sourceCategory = next.find(cat => cat.id === sourceCategoryId)
+      const targetCategory = next.find(cat => cat.id === targetCategoryId)
+      if (!sourceCategory || !targetCategory) return prev
+
+      const sourceIndex = sourceCategory.bookmarks.findIndex(
+        bookmark => bookmark.id === bookmarkId
+      )
+      if (sourceIndex < 0) return prev
+
+      const [bookmark] = sourceCategory.bookmarks.splice(sourceIndex, 1)
+
+      let targetIndex = targetCategory.bookmarks.length
+      if (targetBookmarkId) {
+        const foundIndex = targetCategory.bookmarks.findIndex(
+          target => target.id === targetBookmarkId
+        )
+        if (foundIndex >= 0) {
+          targetIndex = foundIndex + (position === 'after' ? 1 : 0)
+        }
+      }
+
+      targetCategory.bookmarks.splice(targetIndex, 0, bookmark)
+      return next
+    })
+  }, [setCategories])
+
   return {
     categories,
     addCategory,
@@ -255,6 +326,8 @@ export function useBookmarks() {
     addBookmark,
     deleteBookmark,
     editBookmark,
+    reorderCategories,
+    moveBookmark,
   }
 }
 
