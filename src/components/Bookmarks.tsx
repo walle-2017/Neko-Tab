@@ -22,6 +22,7 @@ interface BookmarksProps {
   ) => void
   showBookmarks: boolean
   onToggleShowBookmarks: () => void
+  showFrequentlyVisited: boolean
 }
 
 interface EditingState {
@@ -77,6 +78,7 @@ export function Bookmarks({
   onMoveBookmark,
   showBookmarks,
   onToggleShowBookmarks,
+  showFrequentlyVisited,
 }: BookmarksProps) {
   const [editing, setEditing] = useState<EditingState>({ type: null })
   const [isEditMode, setIsEditMode] = useState(false)
@@ -110,6 +112,12 @@ export function Bookmarks({
   const dropSlotFingerprintRef = useRef('')
 
   useEffect(() => {
+    if (!showFrequentlyVisited) {
+      localStorage.removeItem('neko-top-sites')
+      setTopSites([])
+      return
+    }
+
     if (typeof chrome !== 'undefined' && chrome.topSites) {
       chrome.topSites.get((sites) => {
         const sliced = sites.slice(0, 4)
@@ -123,7 +131,7 @@ export function Bookmarks({
         }
       })
     }
-  }, [])
+  }, [showFrequentlyVisited])
 
   useEffect(() => {
     if (editing.type && inputRef.current) {
@@ -997,7 +1005,7 @@ export function Bookmarks({
             transition: 'none'
           }}
         >
-        {topSites.length > 0 && (
+        {showFrequentlyVisited && topSites.length > 0 && (
           <div className="category-column" data-fixed-category="top-sites">
             <div className="category-header">
               <span className="category-name">Frequently Visited</span>
