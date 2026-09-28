@@ -857,6 +857,15 @@ export function Bookmarks({
     setEditing({ type: null })
   }
 
+  useEffect(() => {
+    if (showBookmarks) return
+
+    // Collapsing Quick Links always leaves it in a clean browsing state.
+    setEditing({ type: null })
+    resetDragState()
+    setIsEditMode(false)
+  }, [showBookmarks])
+
   const handleEditModeToggle = () => {
     if (isEditMode) {
       // Closing the overall edit mode explicitly cancels any unfinished nested edit.
@@ -948,31 +957,35 @@ export function Bookmarks({
           <h3 className="quick-links-title">QUICK LINKS</h3>
         </div>
         <div className="bookmarks-header-actions">
-          {dragState && (
-            <div
-              ref={cancelZoneRef}
-              className={`bookmark-drag-cancel-zone${isCancelZoneActive ? ' is-active' : ''}`}
-              onPointerEnter={() => setCancelZoneActive(true)}
-              onPointerLeave={() => setCancelZoneActive(false)}
-            >
-              <X size={12} />
-              <span>{isCancelZoneActive ? 'RELEASE TO CANCEL' : 'CANCEL DROP'}</span>
-            </div>
+          {showBookmarks && (
+            <>
+              {dragState && (
+                <div
+                  ref={cancelZoneRef}
+                  className={`bookmark-drag-cancel-zone${isCancelZoneActive ? ' is-active' : ''}`}
+                  onPointerEnter={() => setCancelZoneActive(true)}
+                  onPointerLeave={() => setCancelZoneActive(false)}
+                >
+                  <X size={12} />
+                  <span>{isCancelZoneActive ? 'RELEASE TO CANCEL' : 'CANCEL DROP'}</span>
+                </div>
+              )}
+              <button 
+                className="action-btn-mini"
+                style={{ opacity: isEditMode ? 1 : 0.5 }}
+                onClick={handleEditModeToggle}
+                title={isEditMode ? "Done editing" : "Edit bookmarks"}
+              >
+                {isEditMode ? <Check size={14} /> : <Pencil size={14} />}
+              </button>
+            </>
           )}
-          <button 
-            className="action-btn-mini"
-            style={{ opacity: isEditMode ? 1 : 0.5 }}
-            onClick={handleEditModeToggle}
-            title={isEditMode ? "Done editing" : "Edit bookmarks"}
-          >
-            {isEditMode ? <Check size={14} /> : <Pencil size={14} />}
-          </button>
         </div>
       </div>
 
       <div className="categories-scroll-shell">
         <div className="categories-scroll-indicator-row categories-scroll-indicator-row-top" aria-hidden="true">
-          {categoryScrollHint.up && <ChevronUp size={16} />}
+          {showBookmarks && categoryScrollHint.up && <ChevronUp size={16} />}
         </div>
         <div 
           ref={categoriesGridRef}
@@ -1257,7 +1270,7 @@ export function Bookmarks({
         )}
 
         <div className="categories-scroll-indicator-row categories-scroll-indicator-row-bottom" aria-hidden="true">
-          {categoryScrollHint.down && <ChevronDown size={16} />}
+          {showBookmarks && categoryScrollHint.down && <ChevronDown size={16} />}
         </div>
       </div>
 
