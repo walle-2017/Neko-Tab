@@ -5,6 +5,10 @@ import react from '@vitejs/plugin-react'
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '')
+  const packageJson = JSON.parse(
+    readFileSync(resolve(__dirname, 'package.json'), 'utf-8')
+  )
+  const packageVersion = packageJson.version
   const rawExtensionKey = env.GOOGLE_EXTENSION_KEY?.trim() ?? ''
   const normalizedExtensionKey = rawExtensionKey
     .replace(/^['"]|['"]$/g, '')
@@ -35,6 +39,9 @@ export default defineConfig(({ mode }) => {
           const manifestPath = resolve(__dirname, 'dist/manifest.json')
           try {
             const manifestObj = JSON.parse(readFileSync(manifestPath, 'utf-8'))
+
+            // package.json is the canonical project version.
+            manifestObj.version = packageVersion
 
             // Inject or strip Google OAuth2 config based on env presence
             if (env.GOOGLE_CLIENT_ID) {
