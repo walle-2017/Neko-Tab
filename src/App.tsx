@@ -193,6 +193,7 @@ function App() {
               onMoveBookmark={moveBookmark}
               showBookmarks={settings.showBookmarks}
               onToggleShowBookmarks={() => setSettings(s => ({ ...s, showBookmarks: !s.showBookmarks }))}
+              showFrequentlyVisited={settings.showFrequentlyVisited ?? true}
             />
           </div>
         </div>
