@@ -5,8 +5,10 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc && vite build && vite build --config vite.content.config.ts",
-    "preview": "vite preview"
+    "build": "npm run version:check && tsc && vite build && vite build --config vite.content.config.ts",
+    "preview": "vite preview",
+    "version:check": "node scripts/version.mjs check",
+    "version:sync": "node scripts/version.mjs sync"
   },
   "devDependencies": {
     "@types/chrome": "^0.1.32",
