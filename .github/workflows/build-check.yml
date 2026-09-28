@@ -30,3 +30,91 @@ jobs:
 
       - name: Run Build
         run: npm run build
+  finalize-release-and-cleanup:
+    name: Finalize release and cleanup
+    if: github.head_ref == 'chore/unify-versioning'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      actions: write
+
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v5
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: '24.x'
+          cache: 'npm'
+
+      - name: Determine expected patch version
+        shell: bash
+        run: |
+          CURRENT_VERSION=$(node -p "require('./package.json').version")
+          IFS='.' read -ra VER <<< "$CURRENT_VERSION"
+          EXPECTED_VERSION="${VER[0]}.${VER[1]}.$((VER[2]+1))"
+          echo "EXPECTED_VERSION=$EXPECTED_VERSION" >> "$GITHUB_ENV"
+          echo "Expected release: v$EXPECTED_VERSION"
+
+      - name: Dispatch release workflow
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          PREVIOUS_RUN_ID=$(gh run list \
+            --workflow release.yml \
+            --branch main \
+            --event workflow_dispatch \
+            --limit 1 \
+            --json databaseId \
+            --jq '.[0].databaseId // 0')
+
+          gh workflow run release.yml --ref main -f bump_type=patch
+
+          RUN_ID=""
+          for _ in {1..30}; do
+            CANDIDATE=$(gh run list \
+              --workflow release.yml \
+              --branch main \
+              --event workflow_dispatch \
+              --limit 1 \
+              --json databaseId \
+              --jq '.[0].databaseId // 0')
+
+            if [ "$CANDIDATE" != "0" ] && [ "$CANDIDATE" != "$PREVIOUS_RUN_ID" ]; then
+              RUN_ID="$CANDIDATE"
+              break
+            fi
+            sleep 2
+          done
+
+          if [ -z "$RUN_ID" ]; then
+            echo "Could not locate the dispatched release workflow run."
+            exit 1
+          fi
+
+          echo "Waiting for release workflow run $RUN_ID"
+          gh run watch "$RUN_ID" --exit-status
+
+      - name: Verify release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          gh release view "v$EXPECTED_VERSION" --json tagName,name,url
+          RELEASE_VERSION=$(gh release view "v$EXPECTED_VERSION" --json tagName --jq '.tagName')
+          if [ "$RELEASE_VERSION" != "v$EXPECTED_VERSION" ]; then
+            echo "Expected release v$EXPECTED_VERSION but found $RELEASE_VERSION"
+            exit 1
+          fi
+
+      - name: Delete merged branches
+        shell: bash
+        run: |
+          git push origin --delete feat/bookmark-drag-sort
+          git push origin --delete chore/sync-upstream-2026-09-26
+          git push origin --delete chore/unify-versioning
