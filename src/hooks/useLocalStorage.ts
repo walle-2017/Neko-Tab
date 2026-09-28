@@ -247,6 +247,68 @@ export function useBookmarks() {
     ))
   }, [setCategories])
 
+  const reorderCategories = useCallback((
+    activeCategoryId: string,
+    targetIndex: number
+  ) => {
+    setCategories(prev => {
+      const sourceIndex = prev.findIndex(cat => cat.id === activeCategoryId)
+      if (sourceIndex < 0) return prev
+
+      const boundedTarget = Math.max(0, Math.min(targetIndex, prev.length))
+      const insertIndex = boundedTarget - (sourceIndex < boundedTarget ? 1 : 0)
+      if (insertIndex === sourceIndex) return prev
+
+      const next = [...prev]
+      const [activeCategory] = next.splice(sourceIndex, 1)
+      next.splice(insertIndex, 0, activeCategory)
+      return next
+    })
+  }, [setCategories])
+
+  const moveBookmark = useCallback((
+    bookmarkId: string,
+    sourceCategoryId: string,
+    targetCategoryId: string,
+    targetIndex: number
+  ) => {
+    setCategories(prev => {
+      const next = prev.map(cat => ({
+        ...cat,
+        bookmarks: [...cat.bookmarks],
+      }))
+
+      const sourceCategory = next.find(cat => cat.id === sourceCategoryId)
+      const targetCategory = next.find(cat => cat.id === targetCategoryId)
+      if (!sourceCategory || !targetCategory) return prev
+
+      const sourceIndex = sourceCategory.bookmarks.findIndex(
+        bookmark => bookmark.id === bookmarkId
+      )
+      if (sourceIndex < 0) return prev
+
+      const boundedTarget = Math.max(
+        0,
+        Math.min(targetIndex, targetCategory.bookmarks.length)
+      )
+      const insertIndex =
+        sourceCategoryId === targetCategoryId && sourceIndex < boundedTarget
+          ? boundedTarget - 1
+          : boundedTarget
+
+      if (
+        sourceCategoryId === targetCategoryId &&
+        insertIndex === sourceIndex
+      ) {
+        return prev
+      }
+
+      const [bookmark] = sourceCategory.bookmarks.splice(sourceIndex, 1)
+      targetCategory.bookmarks.splice(insertIndex, 0, bookmark)
+      return next
+    })
+  }, [setCategories])
+
   return {
     categories,
     addCategory,
@@ -255,6 +317,8 @@ export function useBookmarks() {
     addBookmark,
     deleteBookmark,
     editBookmark,
+    reorderCategories,
+    moveBookmark,
   }
 }
 
