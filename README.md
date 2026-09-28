@@ -201,3 +201,26 @@ This repository is a fork of [uddin-rajaul/Neko-Tab](https://github.com/uddin-ra
 
 Implementation history: [PR #1](https://github.com/walle-2017/Neko-Tab/pull/1).
 
+### 2026-09-24–28 — Bookmark drag sorting and Quick Links interaction polish
+
+- **Drag-sort custom categories** — custom bookmark categories can be reordered directly in edit mode. The fixed `Frequently Visited` column remains outside user-category sorting.
+- **Drag-sort bookmarks** — bookmarks can be reordered within a category or moved between categories, including empty categories.
+- **Precise insertion targets** — category drop positions are calculated per visual row, while bookmark insertion positions are shown between individual links. The active target uses the accent indicator and inactive valid positions remain visible during the drag.
+- **Pointer-based drag engine** — replaced native HTML5 drag/drop with Pointer Events for more predictable positioning and release behavior.
+- **Continuous auto-scroll** — dragging near an edge scrolls continuously via `requestAnimationFrame`. Bookmark-list scrolling is prioritized before the outer Quick Links category area scrolls.
+- **Stable drag visuals** — drag outlines, insertion hints, and edge drop zones are rendered without shifting the normal page layout.
+- **Nested-scroll clipping** — bookmark insertion indicators are clipped to the visible area of each independently scrolling bookmark list and stay synchronized while scrolling.
+- **Explicit drag cancellation** — a dedicated cancel area appears beside the edit confirmation control; `Escape` also cancels the active drag.
+- **Collapsed-state cleanup** — collapsing Quick Links exits edit/drag state and hides the edit control and category scroll indicators until the section is expanded again.
+
+Implementation history: [PR #2](https://github.com/walle-2017/Neko-Tab/pull/2).
+
+### 2026-09-28 — Unified versioning and release workflow
+
+- **Single version source** — `package.json` is now the canonical project version. `public/manifest.json` and the root `package-lock.json` metadata are kept in sync with it.
+- **Version validation commands** — added `npm run version:check` and `npm run version:sync`.
+- **Build-time protection** — `npm run build` fails when version metadata drifts, and the generated `dist/manifest.json` is forced to use the canonical package version.
+- **Consistent releases** — manual releases calculate the next major/minor/patch version from `package.json`, synchronize version metadata, create the matching `vMAJOR.MINOR.PATCH` tag, build the extension, verify the built manifest, and then publish the GitHub Release.
+- **Tag validation** — tag-triggered releases must exactly match the version declared in `package.json`, preventing mismatched source, extension, and Release versions.
+
+Implementation history: [PR #3](https://github.com/walle-2017/Neko-Tab/pull/3). First release using the unified flow: [v2.0.4](https://github.com/walle-2017/Neko-Tab/releases/tag/v2.0.4).
