@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
-import { ChevronDown, ChevronRight, ExternalLink, Folder } from 'lucide-react'
+import { ChevronDown, ChevronRight, Folder, FolderCog } from 'lucide-react'
 import { SiteIcon } from './SiteIcon'
 
 export function BrowserBookmarks() {
@@ -125,7 +125,7 @@ export function BrowserBookmarks() {
           title="Manage bookmarks in browser"
           aria-label="Manage bookmarks in browser"
         >
-          <ExternalLink size={14} />
+          <FolderCog size={14} />
         </button>
       </div>
       {isExpanded && (
