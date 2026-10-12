@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
-import { BookOpen, ChevronDown, ChevronRight, ExternalLink, Folder } from 'lucide-react'
+import { ChevronDown, ChevronRight, ExternalLink, Folder } from 'lucide-react'
 import { SiteIcon } from './SiteIcon'
 
 export function BrowserBookmarks() {
   const [folders, setFolders] = useState<chrome.bookmarks.BookmarkTreeNode[]>([])
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set())
+  const [isExpanded, setIsExpanded] = useState(true)
   const [error, setError] = useState('')
   const initialized = useRef(false)
 
@@ -105,25 +106,35 @@ export function BrowserBookmarks() {
     : 'chrome://bookmarks/'
 
   return (
-    <section className="browser-bookmarks-panel" aria-label="Browser Bookmarks">
+    <section className={`browser-bookmarks-panel${isExpanded ? '' : ' is-collapsed'}`} aria-label="Browser Bookmarks">
       <div className="browser-bookmarks-header">
-        <h3 className="quick-links-title">BROWSER BOOKMARKS</h3>
         <button
           type="button"
-          className="browser-bookmarks-manage"
+          className="bookmarks-toggle browser-bookmarks-toggle"
+          onClick={() => setIsExpanded(previous => !previous)}
+          aria-expanded={isExpanded}
+          aria-controls="browser-bookmarks-tree"
+        >
+          {isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+          <span className="quick-links-title">BROWSER BOOKMARKS</span>
+        </button>
+        <button
+          type="button"
+          className="action-btn-mini browser-bookmarks-manage"
           onClick={() => openTab(managerUrl)}
           title="Manage bookmarks in browser"
           aria-label="Manage bookmarks in browser"
         >
-          <BookOpen size={14} />
-          <ExternalLink size={12} />
+          <ExternalLink size={14} />
         </button>
       </div>
-      <div className="browser-bookmarks-tree">
-        {error && <p className="browser-bookmarks-message" role="alert">{error}</p>}
-        {!error && folders.length === 0 && <p className="browser-bookmarks-message">No bookmarks found.</p>}
-        {folders.map(folder => renderNode(folder, 0))}
-      </div>
+      {isExpanded && (
+        <div className="browser-bookmarks-tree" id="browser-bookmarks-tree">
+          {error && <p className="browser-bookmarks-message" role="alert">{error}</p>}
+          {!error && folders.length === 0 && <p className="browser-bookmarks-message">No bookmarks found.</p>}
+          {folders.map(folder => renderNode(folder, 0))}
+        </div>
+      )}
     </section>
   )
 }
