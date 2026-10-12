@@ -638,6 +638,7 @@ export function SettingsPanel({ settings, onSettingsChange, onAddCategory }: Set
                         {renderToggle('Show Greeting', localSettings.showGreeting, val => handleChange('showGreeting', val))}
                         {renderToggle('Show Clock', localSettings.showClock, val => handleChange('showClock', val))}
                         {renderToggle('Show Frequently Visited', localSettings.showFrequentlyVisited ?? true, val => handleChange('showFrequentlyVisited', val))}
+                        {renderToggle('Show Browser Bookmarks', localSettings.showBrowserBookmarks ?? false, val => handleChange('showBrowserBookmarks', val))}
                       </div>
                     </div>
 
