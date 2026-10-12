@@ -1,0 +1,158 @@
+/* Keep Quick Links on the viewport centerline; the side tracks share spare space equally. */
+.content-section {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 940px) minmax(0, 1fr);
+  column-gap: 16px;
+  max-width: none;
+}
+
+.content-section.has-side-content {
+  /* Reserve enough space on each side for the 350px ASCII column. */
+  grid-template-columns: minmax(0, 1fr) minmax(0, min(940px, calc(100% - 748px))) minmax(0, 1fr);
+}
+
+.content-section .ascii-column {
+  grid-column: 1;
+  grid-row: 1;
+  flex: none;
+  width: 100%;
+  max-width: 350px;
+  justify-self: end;
+}
+
+.content-section .links-column {
+  grid-column: 2;
+  grid-row: 1;
+  width: 100%;
+  max-width: none;
+}
+
+.browser-bookmarks-column {
+  grid-column: 3;
+  grid-row: 1;
+  width: 100%;
+  min-width: 0;
+  min-height: 0;
+  height: 100%;
+  overflow: hidden;
+}
+
+.browser-bookmarks-panel {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.browser-bookmarks-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 24px;
+  flex: 0 0 auto;
+  margin-bottom: var(--spacing-lg);
+}
+
+.browser-bookmarks-manage {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 3px 5px;
+  color: var(--text-secondary, var(--ash));
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  opacity: 0.75;
+}
+
+.browser-bookmarks-manage:hover,
+.browser-bookmarks-manage:focus-visible {
+  color: var(--accent, var(--cyan-accent));
+  opacity: 1;
+}
+
+.browser-bookmarks-tree {
+  min-height: 0;
+  flex: 1 1 auto;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: thin;
+}
+
+.browser-bookmarks-item {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  width: 100%;
+  min-width: 0;
+  padding: 5px 8px;
+  border: 0;
+  background: transparent;
+  color: var(--text-secondary, var(--platinum));
+  text-align: left;
+  font-size: 13px;
+  line-height: 1.4;
+  cursor: pointer;
+}
+
+.browser-bookmarks-item svg,
+.browser-bookmarks-item .site-icon-img,
+.browser-bookmarks-item .site-icon-letter {
+  flex: 0 0 auto;
+}
+
+.browser-bookmarks-item:hover,
+.browser-bookmarks-item:focus-visible {
+  background: color-mix(in srgb, var(--text-primary, #fff) 6%, transparent);
+  color: var(--accent, var(--cyan-accent));
+}
+
+.browser-bookmarks-item-title {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.browser-bookmarks-message {
+  padding: 8px;
+  font-size: 12px;
+  color: var(--text-secondary, var(--ash));
+}
+
+.has-bg .browser-bookmarks-panel {
+  background: rgba(0, 0, 0, 0.25);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border-radius: 12px;
+  padding: 16px 20px;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.has-bg.paper .browser-bookmarks-panel {
+  background: rgba(255, 255, 255, 0.35);
+  border-color: rgba(0, 0, 0, 0.08);
+}
+
+/* Small windows retain Quick Links alone, regardless of the saved side-column toggles. */
+@media (max-width: 1480px) {
+  .content-section,
+  .content-section.has-side-content {
+    display: flex;
+    justify-content: center;
+    gap: 0;
+  }
+
+  .content-section .ascii-column,
+  .content-section .browser-bookmarks-column {
+    display: none;
+  }
+
+  .content-section .links-column {
+    flex: 0 1 940px;
+    max-width: 940px;
+    min-width: 0;
+  }
+}
