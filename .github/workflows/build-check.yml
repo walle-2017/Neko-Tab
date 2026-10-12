@@ -30,14 +30,3 @@ jobs:
 
       - name: Run Build
         run: npm run build
-      - name: Package test extension
-        run: |
-          cd dist
-          zip -q -r ../Neko_Tab_browser_bookmarks_test.zip .
-
-      - name: Upload test extension
-        uses: actions/upload-artifact@v4
-        with:
-          name: Neko_Tab_browser_bookmarks_test
-          path: Neko_Tab_browser_bookmarks_test.zip
-          retention-days: 7
