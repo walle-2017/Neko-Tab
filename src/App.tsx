@@ -6,6 +6,7 @@ import {
 } from "./hooks/useLocalStorage";
 import { WINDOWS_ASCII, MACOS_ASCII, LINUX_ASCII, CAT_ASCII, DETECTED_OS } from "./components/ascii";
 import { Bookmarks } from "./components/Bookmarks";
+import { BrowserBookmarks } from "./components/BrowserBookmarks";
 import { Clock } from "./components/Clock";
 import { PixelArt } from "./components/PixelArt";
 import { getConnectorsWithWidget, hasActiveCenterWidgets } from "./connectors/registry";
@@ -174,7 +175,7 @@ function App() {
         </div>
 
         {/* Content Section */}
-        <div className="content-section">
+        <div className={`content-section${settings.showAsciiArt !== false || settings.showBrowserBookmarks ? ' has-side-content' : ''}`}>
           {settings.showAsciiArt !== false && (
             <div className="ascii-column">
               <PixelArt asciiArt={displayAsciiArt} />
@@ -196,6 +197,11 @@ function App() {
               showFrequentlyVisited={settings.showFrequentlyVisited ?? true}
             />
           </div>
+          {settings.showBrowserBookmarks && (
+            <div className="browser-bookmarks-column">
+              <BrowserBookmarks />
+            </div>
+          )}
         </div>
 
         {settings.showRssTicker && <RssTicker settings={settings} />}
