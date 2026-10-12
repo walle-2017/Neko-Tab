@@ -83,6 +83,8 @@
 .browser-bookmarks-tree {
   min-height: 0;
   flex: 1 1 auto;
+  /* Match the 18px top scroll-indicator row reserved by Quick Links. */
+  padding-top: 18px;
   overflow-y: auto;
   overflow-x: hidden;
   scrollbar-width: thin;
