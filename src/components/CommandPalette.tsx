@@ -328,6 +328,8 @@ export function CommandPalette({ onOpenTypingTest, portalContainer, context = 'n
   // Open/close
   useEffect(() => {
     const handler = (e: Event) => {
+      // Typing Test owns keyboard input while its fullscreen overlay is open.
+      if (document.querySelector('.tt-overlay')) return
       const ke = e as KeyboardEvent
       const tag = (ke.target as HTMLElement).tagName
       if ((ke.ctrlKey || ke.metaKey) && ke.key === 'k') {
