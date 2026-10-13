@@ -185,15 +185,15 @@ export function Bookmarks({
     return false
   }
 
-  const toGridGeometry = (
+  const toDropLayerGeometry = (
     geometry: DropIndicatorGeometry
   ): DropIndicatorGeometry => {
-    const gridRect = categoriesGridRef.current?.getBoundingClientRect()
-    if (!gridRect) return geometry
+    const layerRect = dropSlotLayerRef.current?.getBoundingClientRect()
+    if (!layerRect) return geometry
 
     return {
-      left: geometry.left - gridRect.left,
-      top: geometry.top - gridRect.top,
+      left: geometry.left - layerRect.left,
+      top: geometry.top - layerRect.top,
       width: geometry.width,
       height: geometry.height,
     }
@@ -208,7 +208,7 @@ export function Bookmarks({
       return
     }
 
-    const relativeGeometry = toGridGeometry(geometry)
+    const relativeGeometry = toDropLayerGeometry(geometry)
     element.style.left = `${relativeGeometry.left}px`
     element.style.top = `${relativeGeometry.top}px`
     element.style.width = `${relativeGeometry.width}px`
@@ -524,7 +524,7 @@ export function Bookmarks({
 
     const visuals = rawVisuals.map(visual => ({
       ...visual,
-      geometry: toGridGeometry(visual.geometry),
+      geometry: toDropLayerGeometry(visual.geometry),
     }))
 
     // Keep existing slot elements visually locked to the scrolled content
