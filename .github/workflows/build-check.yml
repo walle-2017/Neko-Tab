@@ -30,3 +30,11 @@ jobs:
 
       - name: Run Build
         run: npm run build
+
+      - name: Upload scrollbar interaction test package
+        uses: actions/upload-artifact@v4
+        with:
+          name: Neko_Tab_scroll_rail_test
+          path: dist/
+          include-hidden-files: true
+          retention-days: 7
