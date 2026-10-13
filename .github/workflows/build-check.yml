@@ -30,11 +30,3 @@ jobs:
 
       - name: Run Build
         run: npm run build
-
-      - name: Upload hidden page scrollbar test
-        uses: actions/upload-artifact@v4
-        with:
-          name: Neko_Tab_hidden_page_scrollbar_test
-          path: dist/
-          include-hidden-files: true
-          retention-days: 7
