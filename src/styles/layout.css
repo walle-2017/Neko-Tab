@@ -547,10 +547,11 @@
 
 .drag-drop-slot-layer {
   position: absolute;
+  /* Exactly match .categories-grid's viewport after the scroll rail moved beside it. */
   left: 0;
-  right: 0;
-  top: 18px;
-  bottom: 18px;
+  right: 20px;
+  top: 0;
+  bottom: 0;
   z-index: 1199;
   pointer-events: none;
   overflow: hidden;
