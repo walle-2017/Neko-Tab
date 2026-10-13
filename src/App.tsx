@@ -15,6 +15,7 @@ import { RssTicker } from "./components/RssTicker";
 import { DailyGoal } from "./components/DailyGoal";
 import { CommandPalette } from "./components/CommandPalette";
 import { ChromeTabButton } from './components/ChromeTabButton'
+import { ToolbarDock } from './components/ToolbarDock'
 import { StartupLauncher } from './components/StartupLauncher'
 import { TypingOverlay } from './components/TypingTest/TypingOverlay'
 import { Keyboard } from 'lucide-react'
@@ -139,21 +140,24 @@ function App() {
         }
       >
         <Suspense fallback={null}>
-          <SettingsPanel
-            settings={settings}
-            onSettingsChange={setSettings}
-            onAddCategory={addCategory}
-          />
-          <button
-            className="typing-test-toggle"
-            onClick={() => setTypingTestOpen(true)}
-            title="Typing Test"
-          >
-            <Keyboard size={20} />
-          </button>
-          <Scratchpad />
+          <ToolbarDock showChromeTab={settings.showChromeTab === true}>
+            <SettingsPanel
+              settings={settings}
+              onSettingsChange={setSettings}
+              onAddCategory={addCategory}
+            />
+            <FocusMode />
+            <Scratchpad />
+            <button
+              className="typing-test-toggle"
+              onClick={() => setTypingTestOpen(true)}
+              title="Typing Test"
+            >
+              <Keyboard size={20} />
+            </button>
+            <ChromeTabButton visible={settings.showChromeTab} />
+          </ToolbarDock>
           <ShortcutHelp />
-          <ChromeTabButton visible={settings.showChromeTab} />
         </Suspense>
 
         {/* Center Section */}
@@ -210,10 +214,6 @@ function App() {
         {settings.theme === 'nothing' && (
           <div className="nothing-side-text" aria-hidden="true">ネコ・タブ</div>
         )}
-
-        <Suspense fallback={null}>
-          <FocusMode />
-        </Suspense>
 
         <TypingOverlay isOpen={typingTestOpen} onClose={() => setTypingTestOpen(false)} wordCount={settings.typingWordCount} timeLimit={settings.typingTimeLimit} />
       </div>
