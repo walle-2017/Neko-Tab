@@ -1,0 +1,82 @@
+/* Compact new-tab window: keep utilities clear of the clock and footer readable. */
+@media (max-width: 700px) {
+  /*
+   * Reserve enough height for the clock, search, Quick Links header, and status.
+   * A window shorter than this can scroll instead of clipping the footer.
+   */
+  #root {
+    overflow-y: auto;
+    overflow-x: hidden;
+  }
+
+  .app {
+    min-height: 500px;
+    height: max(100dvh, 500px);
+    padding: var(--spacing-md);
+  }
+
+  .app.has-bg {
+    min-height: 500px;
+    height: max(100dvh, 500px);
+  }
+
+  /* The buttons are separate components, so assign stable slots on a single
+     right-hand rail without changing how any component opens its panel. */
+  .settings-toggle,
+  .focus-toggle-btn,
+  .scratchpad-toggle,
+  .typing-test-toggle,
+  .chrome-tab-toggle {
+    right: 12px;
+  }
+
+  .settings-toggle { top: 12px; }
+  .focus-toggle-btn { top: 52px; }
+  .scratchpad-toggle { top: 92px; }
+  .typing-test-toggle { top: 132px; }
+  .chrome-tab-toggle { top: 172px; }
+
+  /* Make the footer participate in the app's flex layout. Wrapped rows are
+     packed tightly rather than spreading out across the bottom of the page. */
+  .activity-widget-container {
+    position: relative;
+    inset: auto;
+    align-self: stretch;
+    flex: 0 0 auto;
+    width: calc(100% + 2 * var(--spacing-md));
+    margin: auto calc(-1 * var(--spacing-md)) calc(-1 * var(--spacing-md));
+    padding: 8px var(--spacing-md);
+  }
+
+  .activity-summary {
+    column-gap: clamp(12px, 3vw, 24px);
+    row-gap: 6px;
+    align-content: flex-start;
+    justify-content: flex-start;
+  }
+
+  .activity-summary > * {
+    flex-shrink: 0;
+  }
+
+  .stat-item {
+    white-space: nowrap;
+  }
+}
+
+/* At extremely narrow sizes, scale the large clock rather than running it
+   underneath the right-side utility rail. */
+@media (max-width: 420px) {
+  .clock-time {
+    font-size: clamp(38px, 11vw, 52px);
+    letter-spacing: 2px;
+  }
+
+  .clock-date {
+    letter-spacing: 1px;
+  }
+
+  .clock-greeting {
+    overflow-wrap: anywhere;
+  }
+}
