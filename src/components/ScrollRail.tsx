@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent, type RefObject } from 'react'
+import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent, type KeyboardEvent as ReactKeyboardEvent, type RefObject } from 'react'
 import { ChevronDown, ChevronUp } from 'lucide-react'
 
 export interface ScrollOverflow {
@@ -115,7 +115,7 @@ export function ScrollRail({ scrollRef, onOverflowChange }: ScrollRailProps) {
     }
   }
 
-  const onThumbKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
+  const onThumbKeyDown = (event: ReactKeyboardEvent<HTMLDivElement>) => {
     const element = scrollRef.current
     if (!element) return
     const step = Math.max(40, element.clientHeight * 0.15)
