@@ -242,6 +242,7 @@
 .app.clock-maximized .settings-toggle,
 .app.clock-maximized .scratchpad-toggle,
 .app.clock-maximized .chrome-tab-toggle,
+.app.clock-maximized .typing-test-toggle,
 .app.clock-maximized .focus-toggle-btn,
 .app.clock-maximized .cp-trigger {
   opacity: 0;
