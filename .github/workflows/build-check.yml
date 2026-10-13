@@ -30,3 +30,11 @@ jobs:
 
       - name: Run Build
         run: npm run build
+
+      - name: Upload minimum-height and utility motion test
+        uses: actions/upload-artifact@v4
+        with:
+          name: Neko_Tab_min_height_button_motion_test
+          path: dist/
+          include-hidden-files: true
+          retention-days: 7
