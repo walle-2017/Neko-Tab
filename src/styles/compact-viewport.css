@@ -7,6 +7,13 @@
 #root {
   overflow-x: hidden;
   overflow-y: auto;
+  /* Preserve scrolling in short windows without showing a page-level bar. */
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+#root::-webkit-scrollbar {
+  display: none;
 }
 
 .app,
