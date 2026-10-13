@@ -1,6 +1,7 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { ChevronDown, ChevronRight, Folder, FolderCog } from 'lucide-react'
 import { SiteIcon } from './SiteIcon'
+import { ScrollRail, type ScrollOverflow } from './ScrollRail'
 
 export function BrowserBookmarks() {
   const [folders, setFolders] = useState<chrome.bookmarks.BookmarkTreeNode[]>([])
@@ -8,6 +9,11 @@ export function BrowserBookmarks() {
   const [isExpanded, setIsExpanded] = useState(true)
   const [error, setError] = useState('')
   const initialized = useRef(false)
+  const treeRef = useRef<HTMLDivElement>(null)
+  const [overflow, setOverflow] = useState<ScrollOverflow>({ up: false, down: false })
+  const updateOverflow = useCallback((next: ScrollOverflow) => {
+    setOverflow(previous => previous.up === next.up && previous.down === next.down ? previous : next)
+  }, [])
 
   useEffect(() => {
     let mounted = true
@@ -129,10 +135,17 @@ export function BrowserBookmarks() {
         </button>
       </div>
       {isExpanded && (
-        <div className="browser-bookmarks-tree" id="browser-bookmarks-tree">
-          {error && <p className="browser-bookmarks-message" role="alert">{error}</p>}
-          {!error && folders.length === 0 && <p className="browser-bookmarks-message">No bookmarks found.</p>}
-          {folders.map(folder => renderNode(folder, 0))}
+        <div className="browser-bookmarks-content">
+          <div
+            ref={treeRef}
+            id="browser-bookmarks-tree"
+            className={`browser-bookmarks-tree${overflow.up ? ' scroll-hint-top' : ''}${overflow.down ? ' scroll-hint-bottom' : ''}`}
+          >
+            {error && <p className="browser-bookmarks-message" role="alert">{error}</p>}
+            {!error && folders.length === 0 && <p className="browser-bookmarks-message">No bookmarks found.</p>}
+            {folders.map(folder => renderNode(folder, 0))}
+          </div>
+          <ScrollRail scrollRef={treeRef} onOverflowChange={updateOverflow} />
         </div>
       )}
     </section>
