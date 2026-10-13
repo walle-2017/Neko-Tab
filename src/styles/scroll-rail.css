@@ -48,9 +48,9 @@
   top: 0;
   bottom: 0;
   left: 8px;
-  width: 2px;
+  width: 1px;
   border-radius: 2px;
-  background: color-mix(in srgb, var(--text-secondary, var(--ash)) 15%, transparent);
+  background: color-mix(in srgb, var(--text-secondary, var(--ash)) 5%, transparent);
   pointer-events: none;
 }
 
@@ -67,15 +67,19 @@
 .scroll-rail-thumb::before {
   content: '';
   position: absolute;
-  inset: 0 auto 0 6px;
-  width: 6px;
+  inset: 0 auto 0 7px;
+  width: 4px;
   border-radius: 4px;
-  background: color-mix(in srgb, var(--accent, var(--cyan-accent)) 75%, var(--text-secondary, var(--ash)));
+  background: color-mix(in srgb, var(--text-secondary, var(--ash)) 16%, transparent);
 }
 
 .scroll-rail-thumb:hover::before,
 .scroll-rail-thumb:focus-visible::before {
-  background: var(--accent, var(--cyan-accent));
+  background: color-mix(in srgb, var(--accent, var(--cyan-accent)) 42%, transparent);
+}
+
+.scroll-rail-thumb:active::before {
+  background: color-mix(in srgb, var(--accent, var(--cyan-accent)) 62%, transparent);
 }
 
 .scroll-rail-thumb:active {
