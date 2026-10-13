@@ -1,27 +1,52 @@
-/* Compact new-tab window: keep utilities clear of the clock and footer readable. */
-@media (max-width: 700px) {
-  /*
-   * Reserve enough height for the clock, search, Quick Links header, and status.
-   * A window shorter than this can scroll instead of clipping the footer.
-   */
-  #root {
-    overflow-y: auto;
-    overflow-x: hidden;
-  }
+/* Keep a usable page at every width. When the viewport is shorter,
+   scroll the page instead of clipping the clock, search, or footer. */
+:root {
+  --neko-min-page-height: 500px;
+}
 
+#root {
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+.app,
+.app.has-bg {
+  min-height: var(--neko-min-page-height);
+  height: max(100dvh, var(--neko-min-page-height));
+}
+
+/* Utilities belong to one layer below dialogs and above page content.
+   Explicit right/top transitions make the horizontal/vertical swap consistent. */
+.settings-toggle,
+.focus-toggle-btn,
+.scratchpad-toggle,
+.typing-test-toggle,
+.chrome-tab-toggle {
+  z-index: 100;
+  transition:
+    top 260ms cubic-bezier(0.22, 1, 0.36, 1),
+    right 260ms cubic-bezier(0.22, 1, 0.36, 1),
+    color 150ms ease,
+    background-color 150ms ease,
+    opacity 400ms ease,
+    max-height 500ms ease,
+    margin 500ms ease,
+    padding 500ms ease,
+    visibility 400ms ease;
+}
+
+/* Chrome Tab and Typing Test previously occupied the same horizontal slot. */
+.chrome-tab-toggle {
+  right: calc(var(--spacing-md) + 192px);
+}
+
+/* Only the tool arrangement depends on width, not the page's minimum height. */
+@media (max-width: 700px) {
   .app {
-    min-height: 500px;
-    height: max(100dvh, 500px);
+    --compact-edge-padding: var(--spacing-md);
     padding: var(--spacing-md);
   }
 
-  .app.has-bg {
-    min-height: 500px;
-    height: max(100dvh, 500px);
-  }
-
-  /* The buttons are separate components, so assign stable slots on a single
-     right-hand rail without changing how any component opens its panel. */
   .settings-toggle,
   .focus-toggle-btn,
   .scratchpad-toggle,
@@ -35,17 +60,24 @@
   .scratchpad-toggle { top: 92px; }
   .typing-test-toggle { top: 132px; }
   .chrome-tab-toggle { top: 172px; }
+}
 
-  /* Make the footer participate in the app's flex layout. Wrapped rows are
-     packed tightly rather than spreading out across the bottom of the page. */
+/* A short viewport or narrow width uses a footer in document flow, so it
+   never covers the clock/search and its wrapped lines stay close together. */
+@media (max-width: 700px), (max-height: 499px) {
+  .app {
+    padding-bottom: var(--compact-edge-padding, var(--spacing-xl));
+  }
+
   .activity-widget-container {
     position: relative;
     inset: auto;
     align-self: stretch;
     flex: 0 0 auto;
-    width: calc(100% + 2 * var(--spacing-md));
-    margin: auto calc(-1 * var(--spacing-md)) calc(-1 * var(--spacing-md));
-    padding: 8px var(--spacing-md);
+    width: calc(100% + 2 * var(--compact-edge-padding, var(--spacing-xl)));
+    margin: auto calc(-1 * var(--compact-edge-padding, var(--spacing-xl)))
+      calc(-1 * var(--compact-edge-padding, var(--spacing-xl)));
+    padding: 8px var(--compact-edge-padding, var(--spacing-xl));
   }
 
   .activity-summary {
@@ -61,6 +93,16 @@
 
   .stat-item {
     white-space: nowrap;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .settings-toggle,
+  .focus-toggle-btn,
+  .scratchpad-toggle,
+  .typing-test-toggle,
+  .chrome-tab-toggle {
+    transition: color 150ms ease, background-color 150ms ease;
   }
 }
 
