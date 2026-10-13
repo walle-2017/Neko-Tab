@@ -1,9 +1,10 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useCallback } from 'react'
 import { Plus, Pencil, Trash2, X, Check, ChevronDown, ChevronRight, ChevronUp, GripVertical } from 'lucide-react'
 import type { BookmarkCategory, Bookmark } from '../types'
 import { recordTabUsage } from '../utils/tabUsage'
 import { isSafeUrl } from '../utils/browser'
 import { SiteIcon } from './SiteIcon'
+import { ScrollRail } from './ScrollRail'
 
 interface BookmarksProps {
   categories: BookmarkCategory[]
@@ -148,15 +149,11 @@ export function Bookmarks({
     }
   }
 
-  const updateCategoryScrollHint = () => {
-    const element = categoriesGridRef.current
-    if (!element) return
-
-    const next = getScrollHintState(element)
+  const updateCategoryScrollHint = useCallback((next: ScrollHintState) => {
     setCategoryScrollHint(prev =>
       prev.up === next.up && prev.down === next.down ? prev : next
     )
-  }
+  }, [])
 
   const handleBookmarkScroll = (categoryId: string, event: React.UIEvent<HTMLDivElement>) => {
     const next = getScrollHintState(event.currentTarget)
@@ -816,22 +813,6 @@ export function Bookmarks({
   }, [dragState])
 
 
-  useEffect(() => {
-    const element = categoriesGridRef.current
-    if (!element) return
-
-    const frame = requestAnimationFrame(updateCategoryScrollHint)
-    const resizeObserver = new ResizeObserver(updateCategoryScrollHint)
-    resizeObserver.observe(element)
-    window.addEventListener('resize', updateCategoryScrollHint)
-
-    return () => {
-      cancelAnimationFrame(frame)
-      resizeObserver.disconnect()
-      window.removeEventListener('resize', updateCategoryScrollHint)
-    }
-  }, [categories, topSites.length, showBookmarks])
-
   const handleSave = () => {
     if (!editing.value?.trim()) {
       setEditing({ type: null })
@@ -992,13 +973,9 @@ export function Bookmarks({
       </div>
 
       <div className="categories-scroll-shell">
-        <div className="categories-scroll-indicator-row categories-scroll-indicator-row-top" aria-hidden="true">
-          {showBookmarks && categoryScrollHint.up && <ChevronUp size={16} />}
-        </div>
         <div 
           ref={categoriesGridRef}
           className={`categories-grid${scrollHintClass(categoryScrollHint)} ${!showBookmarks ? 'no-transition' : ''}`}
-          onScroll={updateCategoryScrollHint}
           style={{ 
             opacity: showBookmarks ? 1 : 0,
             pointerEvents: showBookmarks ? 'auto' : 'none',
@@ -1277,9 +1254,7 @@ export function Bookmarks({
           </div>
         )}
 
-        <div className="categories-scroll-indicator-row categories-scroll-indicator-row-bottom" aria-hidden="true">
-          {showBookmarks && categoryScrollHint.down && <ChevronDown size={16} />}
-        </div>
+        {showBookmarks && <ScrollRail scrollRef={categoriesGridRef} onOverflowChange={updateCategoryScrollHint} />}
       </div>
 
       {dragState && (
