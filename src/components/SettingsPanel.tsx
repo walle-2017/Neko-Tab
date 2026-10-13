@@ -12,6 +12,7 @@ import type { CitySearchResult } from '../utils/weather'
 import { fetchFeedForValidation, clearRssCache, RSS_REFRESH_MINUTES } from '../utils/rss'
 import type { RssFeed } from '../types/rss'
 import { resetScores } from '../utils/typing/history'
+import { OverlayPortal } from './OverlayPortal'
 
 const THEMES: ThemeInfo[] = [
   // Simple Color Themes
@@ -354,6 +355,7 @@ export function SettingsPanel({ settings, onSettingsChange, onAddCategory }: Set
       </button>
 
       {isOpen && (
+        <OverlayPortal>
         <div className='settings-overlay' onClick={() => setIsOpen(false)}>
           <div className='saas-modal' onClick={e => e.stopPropagation()}>
             <button className='saas-close-btn top-right' onClick={() => setIsOpen(false)}>
@@ -1350,9 +1352,10 @@ export function SettingsPanel({ settings, onSettingsChange, onAddCategory }: Set
             </div>
           </div>
         </div>
+        </OverlayPortal>
       )}
       {toast && (
-        <div className="cp-toast">{toast}</div>
+        <OverlayPortal><div className="cp-toast">{toast}</div></OverlayPortal>
       )}
     </>
   )
