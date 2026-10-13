@@ -30,3 +30,11 @@ jobs:
 
       - name: Run Build
         run: npm run build
+
+      - name: Upload alignment and drag-hint test package
+        uses: actions/upload-artifact@v4
+        with:
+          name: Neko_Tab_UI_drag_hint_test
+          path: dist/
+          include-hidden-files: true
+          retention-days: 7
