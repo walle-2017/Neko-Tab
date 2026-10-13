@@ -30,3 +30,11 @@ jobs:
 
       - name: Run Build
         run: npm run build
+
+      - name: Upload typing test focus fix extension
+        uses: actions/upload-artifact@v4
+        with:
+          name: Neko_Tab_typing_focus_fix_test
+          path: dist/
+          include-hidden-files: true
+          retention-days: 7
