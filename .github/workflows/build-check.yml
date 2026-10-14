@@ -30,3 +30,77 @@ jobs:
 
       - name: Run Build
         run: npm run build
+
+  publish-v2-1-0:
+    name: Publish v2.1.0 and remove temporary branch
+    if: github.head_ref == 'chore/publish-v2.1.0'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      actions: write
+
+    steps:
+      - name: Checkout merged main
+        uses: actions/checkout@v5
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Verify target commit and release prerequisites
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          test "$(git rev-parse HEAD)" = "c9b49650deefc9488dec9c96bfed203f134db9ec"
+          test "$(node -p "require('./package.json').version")" = "2.0.4"
+          if gh release view v2.1.0 >/dev/null 2>&1; then
+            echo "v2.1.0 is already published; refusing to release twice."
+            exit 1
+          fi
+          if git ls-remote --tags origin refs/tags/v2.1.0 | grep -q .; then
+            echo "v2.1.0 tag already exists; refusing to move it."
+            exit 1
+          fi
+
+      - name: Dispatch existing minor release workflow
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          PREVIOUS_RUN_ID=$(gh run list --workflow release.yml --branch main --event workflow_dispatch --limit 1 --json databaseId --jq '.[0].databaseId // 0')
+          gh workflow run release.yml --ref main -f bump_type=minor
+          RUN_ID=""
+          for _ in {1..45}; do
+            CANDIDATE=$(gh run list --workflow release.yml --branch main --event workflow_dispatch --limit 1 --json databaseId --jq '.[0].databaseId // 0')
+            if [ "$CANDIDATE" != "0" ] && [ "$CANDIDATE" != "$PREVIOUS_RUN_ID" ]; then
+              RUN_ID="$CANDIDATE"
+              break
+            fi
+            sleep 2
+          done
+          if [ -z "$RUN_ID" ]; then
+            echo "Dispatched release run was not found."
+            exit 1
+          fi
+          echo "Watching official release workflow run $RUN_ID"
+          gh run watch "$RUN_ID" --exit-status
+
+      - name: Verify release and downloadable ZIP
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          gh release view v2.1.0 --json tagName,url,assets
+          ASSET=$(gh release view v2.1.0 --json assets --jq '[.assets[].name] | index("Neko_Tab_v2.1.0.zip")')
+          if [ "$ASSET" = "null" ]; then
+            echo "Release ZIP Neko_Tab_v2.1.0.zip not found."
+            exit 1
+          fi
+          git fetch origin main
+          ACTUAL_VERSION=$(git show origin/main:package.json | node -e 'let s="";process.stdin.on("data",c=>s+=c).on("end",()=>console.log(JSON.parse(s).version))')
+          test "$ACTUAL_VERSION" = "2.1.0"
+
+      - name: Remove temporary operational branch
+        shell: bash
+        run: |
+          git push origin --delete chore/publish-v2.1.0
