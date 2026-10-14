@@ -1,8 +1,5 @@
 /* ==================== SCRATCHPAD ==================== */
 .scratchpad-toggle {
-  position: fixed;
-  top: var(--spacing-md);
-  right: calc(var(--spacing-md) + 96px);
   background: none;
   border: none;
   border-radius: 8px;
@@ -12,8 +9,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.2s ease;
-  z-index: 100;
+  transition: color 0.15s ease, background-color 0.15s ease;
 }
 
 .scratchpad-toggle:hover {
