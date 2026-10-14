@@ -239,11 +239,6 @@
 
 .app.clock-maximized .content-section,
 .app.clock-maximized .activity-widget,
-.app.clock-maximized .settings-toggle,
-.app.clock-maximized .scratchpad-toggle,
-.app.clock-maximized .chrome-tab-toggle,
-.app.clock-maximized .typing-test-toggle,
-.app.clock-maximized .focus-toggle-btn,
 .app.clock-maximized .cp-trigger {
   opacity: 0;
   visibility: hidden;
@@ -256,10 +251,6 @@
 
 .content-section,
 .activity-widget,
-.settings-toggle,
-.scratchpad-toggle,
-.chrome-tab-toggle,
-.focus-toggle-btn,
 .daily-goal-container,
 .cp-trigger {
   transition: opacity 0.4s ease, max-height 0.5s ease, margin 0.5s ease, padding 0.5s ease, visibility 0.4s ease;
