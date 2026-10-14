@@ -30,3 +30,46 @@ jobs:
 
       - name: Run Build
         run: npm run build
+
+  cleanup-merged-branches:
+    name: Delete verified merged branches
+    if: github.head_ref == 'chore/delete-merged-branches-2026-10-14' && github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout main with full history
+        uses: actions/checkout@v5
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Verify no unmerged commits remain
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin main
+          while IFS=: read -r branch expected; do
+            current="$(git ls-remote --heads origin "refs/heads/$branch" | cut -f1)"
+            if [ "$current" != "$expected" ]; then
+              echo "Ref changed or missing: $branch (expected $expected, got $current)"
+              exit 1
+            fi
+            if ! git merge-base --is-ancestor "$expected" origin/main; then
+              echo "Unmerged commits found on $branch; refusing to delete"
+              exit 1
+            fi
+            echo "Verified safe to delete: $branch ($expected)"
+          done <<'MERGED_BRANCHES'
+          feat/browser-bookmarks-viewer:56cac36179c65c551f2892ca2e1cca4ba4819bf4
+          docs/sync-fork-changes:6cdd11c571358ce23b93a495d285b85dcefa7c15
+          MERGED_BRANCHES
+
+      - name: Remove merged branches and operational branch
+        shell: bash
+        run: |
+          set -euo pipefail
+          git push origin --delete feat/browser-bookmarks-viewer docs/sync-fork-changes
+          git push origin --delete chore/delete-merged-branches-2026-10-14
