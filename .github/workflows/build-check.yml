@@ -30,3 +30,11 @@ jobs:
 
       - name: Run Build
         run: npm run build
+
+      - name: Upload cleaned PR test extension
+        uses: actions/upload-artifact@v4
+        with:
+          name: Neko_Tab_PR7_cleaned_test
+          path: dist/
+          include-hidden-files: true
+          retention-days: 7
