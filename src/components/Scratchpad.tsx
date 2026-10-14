@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { NotebookPen, X, List, BookOpen } from 'lucide-react'
 import { useLocalStorage } from '../hooks/useLocalStorage'
+import { OverlayPortal } from './OverlayPortal'
 
 interface CheckItem { id: string; text: string; done: boolean }
 type Mode = 'notes' | 'checklist' | 'journal'
@@ -96,6 +97,7 @@ export function Scratchpad() {
       </button>
 
       {isOpen && (
+        <OverlayPortal>
         <div className="scratchpad-overlay" onClick={handleClose}>
           <div className="scratchpad-panel" onClick={e => e.stopPropagation()}>
             <div className="scratchpad-header">
@@ -173,6 +175,7 @@ export function Scratchpad() {
             )}
           </div>
         </div>
+        </OverlayPortal>
       )}
     </>
   )

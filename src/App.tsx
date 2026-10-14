@@ -6,6 +6,7 @@ import {
 } from "./hooks/useLocalStorage";
 import { WINDOWS_ASCII, MACOS_ASCII, LINUX_ASCII, CAT_ASCII, DETECTED_OS } from "./components/ascii";
 import { Bookmarks } from "./components/Bookmarks";
+import { BrowserBookmarks } from "./components/BrowserBookmarks";
 import { Clock } from "./components/Clock";
 import { PixelArt } from "./components/PixelArt";
 import { getConnectorsWithWidget, hasActiveCenterWidgets } from "./connectors/registry";
@@ -14,6 +15,7 @@ import { RssTicker } from "./components/RssTicker";
 import { DailyGoal } from "./components/DailyGoal";
 import { CommandPalette } from "./components/CommandPalette";
 import { ChromeTabButton } from './components/ChromeTabButton'
+import { ToolbarDock } from './components/ToolbarDock'
 import { StartupLauncher } from './components/StartupLauncher'
 import { TypingOverlay } from './components/TypingTest/TypingOverlay'
 import { Keyboard } from 'lucide-react'
@@ -138,21 +140,24 @@ function App() {
         }
       >
         <Suspense fallback={null}>
-          <SettingsPanel
-            settings={settings}
-            onSettingsChange={setSettings}
-            onAddCategory={addCategory}
-          />
-          <button
-            className="typing-test-toggle"
-            onClick={() => setTypingTestOpen(true)}
-            title="Typing Test"
-          >
-            <Keyboard size={20} />
-          </button>
-          <Scratchpad />
+          <ToolbarDock showChromeTab={settings.showChromeTab === true}>
+            <SettingsPanel
+              settings={settings}
+              onSettingsChange={setSettings}
+              onAddCategory={addCategory}
+            />
+            <FocusMode />
+            <Scratchpad />
+            <button
+              className="typing-test-toggle"
+              onClick={() => setTypingTestOpen(true)}
+              title="Typing Test"
+            >
+              <Keyboard size={20} />
+            </button>
+            <ChromeTabButton visible={settings.showChromeTab} />
+          </ToolbarDock>
           <ShortcutHelp />
-          <ChromeTabButton visible={settings.showChromeTab} />
         </Suspense>
 
         {/* Center Section */}
@@ -174,7 +179,7 @@ function App() {
         </div>
 
         {/* Content Section */}
-        <div className="content-section">
+        <div className={`content-section${settings.showAsciiArt !== false || settings.showBrowserBookmarks ? ' has-side-content' : ''}`}>
           {settings.showAsciiArt !== false && (
             <div className="ascii-column">
               <PixelArt asciiArt={displayAsciiArt} />
@@ -196,6 +201,11 @@ function App() {
               showFrequentlyVisited={settings.showFrequentlyVisited ?? true}
             />
           </div>
+          {settings.showBrowserBookmarks && (
+            <div className="browser-bookmarks-column">
+              <BrowserBookmarks />
+            </div>
+          )}
         </div>
 
         {settings.showRssTicker && <RssTicker settings={settings} />}
@@ -204,10 +214,6 @@ function App() {
         {settings.theme === 'nothing' && (
           <div className="nothing-side-text" aria-hidden="true">ネコ・タブ</div>
         )}
-
-        <Suspense fallback={null}>
-          <FocusMode />
-        </Suspense>
 
         <TypingOverlay isOpen={typingTestOpen} onClose={() => setTypingTestOpen(false)} wordCount={settings.typingWordCount} timeLimit={settings.typingTimeLimit} />
       </div>

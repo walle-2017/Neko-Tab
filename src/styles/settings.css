@@ -1,8 +1,5 @@
 /* Settings */
 .settings-toggle {
-  position: fixed;
-  top: var(--spacing-md);
-  right: var(--spacing-md);
   background: none;
   border: none;
   border-radius: 8px;
@@ -13,7 +10,6 @@
   align-items: center;
   justify-content: center;
   transition: color 0.15s ease, background-color 0.15s ease;
-  z-index: 100;
 }
 
 .settings-toggle:hover {

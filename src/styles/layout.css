@@ -239,10 +239,6 @@
 
 .app.clock-maximized .content-section,
 .app.clock-maximized .activity-widget,
-.app.clock-maximized .settings-toggle,
-.app.clock-maximized .scratchpad-toggle,
-.app.clock-maximized .chrome-tab-toggle,
-.app.clock-maximized .focus-toggle-btn,
 .app.clock-maximized .cp-trigger {
   opacity: 0;
   visibility: hidden;
@@ -255,10 +251,6 @@
 
 .content-section,
 .activity-widget,
-.settings-toggle,
-.scratchpad-toggle,
-.chrome-tab-toggle,
-.focus-toggle-btn,
 .daily-goal-container,
 .cp-trigger {
   transition: opacity 0.4s ease, max-height 0.5s ease, margin 0.5s ease, padding 0.5s ease, visibility 0.4s ease;
@@ -397,27 +389,16 @@
   width: 100%;
   overflow: hidden;
   display: grid;
-  grid-template-rows: 18px minmax(0, 1fr) 18px;
+  grid-template-columns: minmax(0, 1fr) 18px;
+  grid-template-rows: minmax(0, 1fr);
+  column-gap: 2px;
   position: relative;
-}
-
-.categories-scroll-indicator-row {
-  pointer-events: none;
-  color: var(--text-secondary, var(--ash));
-  opacity: 0.72;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 18px;
-}
-
-.categories-scroll-indicator-row svg {
-  width: 16px;
-  height: 16px;
 }
 
 .categories-grid {
   display: grid;
+  grid-column: 1;
+  grid-row: 1;
   grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
   gap: 24px 32px;
   align-content: flex-start;
@@ -558,10 +539,11 @@
 
 .drag-drop-slot-layer {
   position: absolute;
+  /* Exactly match .categories-grid's viewport after the scroll rail moved beside it. */
   left: 0;
-  right: 0;
-  top: 18px;
-  bottom: 18px;
+  right: 20px;
+  top: 0;
+  bottom: 0;
   z-index: 1199;
   pointer-events: none;
   overflow: hidden;

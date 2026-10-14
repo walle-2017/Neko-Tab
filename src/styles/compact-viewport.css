@@ -1,0 +1,82 @@
+/* Keep a usable page at every width. When the viewport is shorter,
+   scroll the page instead of clipping the clock, search, or footer. */
+:root {
+  --neko-min-page-height: 500px;
+}
+
+#root {
+  overflow-x: hidden;
+  overflow-y: auto;
+  /* Preserve scrolling in short windows without showing a page-level bar. */
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+#root::-webkit-scrollbar {
+  display: none;
+}
+
+.app,
+.app.has-bg {
+  min-height: var(--neko-min-page-height);
+  height: max(100dvh, var(--neko-min-page-height));
+}
+
+/* Only the page padding still depends on width; the toolbar has its own tray. */
+@media (max-width: 700px) {
+  .app {
+    --compact-edge-padding: var(--spacing-md);
+    padding: var(--spacing-md);
+  }
+}
+
+/* A short viewport or narrow width uses a footer in document flow, so it
+   never covers the clock/search and its wrapped lines stay close together. */
+@media (max-width: 700px), (max-height: 499px) {
+  .app {
+    padding-bottom: var(--compact-edge-padding, var(--spacing-xl));
+  }
+
+  .activity-widget-container {
+    position: relative;
+    inset: auto;
+    align-self: stretch;
+    flex: 0 0 auto;
+    width: calc(100% + 2 * var(--compact-edge-padding, var(--spacing-xl)));
+    margin: auto calc(-1 * var(--compact-edge-padding, var(--spacing-xl)))
+      calc(-1 * var(--compact-edge-padding, var(--spacing-xl)));
+    padding: 8px var(--compact-edge-padding, var(--spacing-xl));
+  }
+
+  .activity-summary {
+    column-gap: clamp(12px, 3vw, 24px);
+    row-gap: 6px;
+    align-content: flex-start;
+    justify-content: flex-start;
+  }
+
+  .activity-summary > * {
+    flex-shrink: 0;
+  }
+
+  .stat-item {
+    white-space: nowrap;
+  }
+}
+
+/* At extremely narrow sizes, scale the large clock rather than running it
+   underneath the right-side utility rail. */
+@media (max-width: 420px) {
+  .clock-time {
+    font-size: clamp(38px, 11vw, 52px);
+    letter-spacing: 2px;
+  }
+
+  .clock-date {
+    letter-spacing: 1px;
+  }
+
+  .clock-greeting {
+    overflow-wrap: anywhere;
+  }
+}

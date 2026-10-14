@@ -1,8 +1,5 @@
 /* ── Typing Test Toggle Button ── */
 .typing-test-toggle {
-  position: fixed;
-  top: var(--spacing-md);
-  right: calc(var(--spacing-md) + 144px);
   background: none;
   border: none;
   border-radius: 8px;
@@ -13,7 +10,6 @@
   align-items: center;
   justify-content: center;
   transition: color 0.15s ease, background-color 0.15s ease;
-  z-index: 100;
 }
 
 .typing-test-toggle:hover {

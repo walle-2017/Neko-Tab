@@ -85,6 +85,7 @@ export interface Settings {
   showChromeTab: boolean
   // Bookmarks
   showBookmarks: boolean
+  showBrowserBookmarks: boolean
   showFrequentlyVisited: boolean
   showAsciiArt: boolean
   // Connectors (third-party integrations)

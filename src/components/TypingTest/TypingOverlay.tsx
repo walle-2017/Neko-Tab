@@ -226,17 +226,39 @@ export function TypingOverlay({ isOpen, onClose, wordCount = 50, timeLimit = 60 
     }
   }, [isOpen])
 
-  // Escape to close, Tab to restart
+  // Reclaim keyboard focus after the toolbar click that opened this overlay.
   useEffect(() => {
+    if (!isOpen) return
+    const frame = requestAnimationFrame(() => inputRef.current?.focus())
+    return () => cancelAnimationFrame(frame)
+  }, [isOpen])
+
+  // Handle a lost input focus without requiring the user to click the invisible
+  // textarea. Also stop global new-tab shortcuts from swallowing typing keys.
+  useEffect(() => {
+    if (!isOpen) return
+
     const handler = (e: KeyboardEvent) => {
-      if (!isOpen) return
       if (e.key === 'Escape') {
+        e.preventDefault()
+        e.stopPropagation()
         onClose()
+        return
       }
+
+      if (e.target instanceof HTMLElement && e.target.classList.contains('tt-hidden-input')) return
+      if (e.ctrlKey || e.metaKey || e.altKey || phase === 'finished') return
+      if (e.key.length !== 1 && e.key !== 'Backspace') return
+
+      e.preventDefault()
+      e.stopPropagation()
+      inputRef.current?.focus()
+      handleTypingInput(e.key)
     }
-    window.addEventListener('keydown', handler)
-    return () => window.removeEventListener('keydown', handler)
-  }, [isOpen, onClose])
+
+    window.addEventListener('keydown', handler, true)
+    return () => window.removeEventListener('keydown', handler, true)
+  }, [isOpen, onClose, phase, handleTypingInput])
 
   if (!isOpen) return null
 

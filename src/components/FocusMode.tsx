@@ -5,6 +5,7 @@ import { useLocalStorage } from '../hooks/useLocalStorage'
 import { useFocusSessions } from '../hooks/useFocusSessions'
 import type { FocusSession } from '../hooks/useFocusSessions'
 import { clearFocusSessionTabUsageCount, readFocusSessionTabUsageCount } from '../utils/tabUsage'
+import { OverlayPortal } from './OverlayPortal'
 
 const ConsistencyIcon = ({ size = 18, className = "" }: { size?: number, className?: string }) => (
   <svg width={size} height={size} viewBox="0 0 100 100" fill="none" stroke="currentColor" strokeWidth="6" strokeLinecap="round" strokeLinejoin="round" className={className}>
@@ -415,6 +416,7 @@ export function FocusMode() {
       </button>
 
       {isActive && (
+        <OverlayPortal>
         <div className="focus-overlay" onClick={() => setIsActive(false)}>
           <div className="focus-modal" onClick={e => e.stopPropagation()}>
             <div className="focus-header">
@@ -618,9 +620,11 @@ export function FocusMode() {
             </div>
           </div>
         </div>
+        </OverlayPortal>
       )}
 
       {showSummary && summaryData && (
+        <OverlayPortal>
         <div className="focus-overlay" onClick={() => setShowSummary(false)}>
           <div className="focus-summary-modal" onClick={e => e.stopPropagation()}>
             <Shield size={48} className="summary-icon" />
@@ -641,6 +645,7 @@ export function FocusMode() {
             </button>
           </div>
         </div>
+        </OverlayPortal>
       )}
     </>
   )

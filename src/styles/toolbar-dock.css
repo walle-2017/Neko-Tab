@@ -1,0 +1,95 @@
+/* The dock is the only fixed toolbar surface. Both the tray bounds and every
+   button move with the same timing so responsive rotation stays coordinated. */
+.toolbar-dock {
+  --dock-length: 168px; /* four 36px buttons, 4px gaps, 6px insets */
+  position: fixed;
+  top: 12px;
+  right: 12px;
+  width: var(--dock-length);
+  height: 48px;
+  z-index: 100;
+  isolation: isolate;
+  border-radius: 12px;
+  border: 1px solid color-mix(in srgb, var(--text-primary, #fff) 11%, transparent);
+  background: color-mix(in srgb, var(--bg-primary, #222526) 94%, var(--text-primary, #fff) 6%);
+  box-shadow:
+    0 2px 7px rgba(0, 0, 0, 0.06),
+    0 6px 18px rgba(0, 0, 0, 0.08);
+  transition:
+    width 300ms cubic-bezier(0.22, 1, 0.36, 1),
+    height 300ms cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 300ms ease,
+    visibility 300ms ease;
+}
+
+.toolbar-dock.has-chrome-tab {
+  --dock-length: 208px;
+}
+
+.toolbar-dock > .settings-toggle { --dock-offset: 0px; }
+.toolbar-dock > .focus-toggle-btn { --dock-offset: 40px; }
+.toolbar-dock > .scratchpad-toggle { --dock-offset: 80px; }
+.toolbar-dock > .typing-test-toggle { --dock-offset: 120px; }
+.toolbar-dock > .chrome-tab-toggle { --dock-offset: 160px; }
+
+.toolbar-dock > :is(
+  .settings-toggle,
+  .focus-toggle-btn,
+  .scratchpad-toggle,
+  .typing-test-toggle,
+  .chrome-tab-toggle
+) {
+  position: absolute;
+  top: 6px;
+  right: calc(6px + var(--dock-offset));
+  width: 36px;
+  height: 36px;
+  padding: 8px;
+  margin: 0;
+  z-index: auto;
+  transition:
+    top 300ms cubic-bezier(0.22, 1, 0.36, 1),
+    right 300ms cubic-bezier(0.22, 1, 0.36, 1),
+    color 150ms ease,
+    background-color 150ms ease,
+    opacity 300ms ease;
+}
+
+@media (max-width: 700px) {
+  .toolbar-dock {
+    width: 48px;
+    height: var(--dock-length);
+  }
+
+  .toolbar-dock > :is(
+    .settings-toggle,
+    .focus-toggle-btn,
+    .scratchpad-toggle,
+    .typing-test-toggle,
+    .chrome-tab-toggle
+  ) {
+    top: calc(6px + var(--dock-offset));
+    right: 6px;
+  }
+}
+
+.app.clock-maximized .toolbar-dock {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .toolbar-dock {
+    transition: none;
+  }
+  .toolbar-dock > :is(
+    .settings-toggle,
+    .focus-toggle-btn,
+    .scratchpad-toggle,
+    .typing-test-toggle,
+    .chrome-tab-toggle
+  ) {
+    transition: color 150ms ease, background-color 150ms ease;
+  }
+}
