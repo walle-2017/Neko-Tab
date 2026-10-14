@@ -30,3 +30,57 @@ jobs:
 
       - name: Run Build
         run: npm run build
+
+  cleanup-obsolete-workflow:
+    name: Remove orphaned One-off Fork Release workflow
+    if: github.head_ref == 'chore/cleanup-legacy-action-2026-10-14' && github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+      actions: write
+
+    steps:
+      - name: Checkout current main
+        uses: actions/checkout@v5
+        with:
+          ref: main
+          fetch-depth: 1
+
+      - name: Verify obsolete workflow identity and protect active workflows
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f .github/workflows/build-check.yml
+          test -f .github/workflows/release.yml
+          test ! -e .github/workflows/one-off-release.yml
+          echo 'Current workflow registry:'
+          gh api "repos/$GITHUB_REPOSITORY/actions/workflows?per_page=100" --jq '.workflows[] | "\(.id) | \(.name) | \(.path) | \(.state)"'
+          run_json="$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/34914073918")"
+          test "$(jq -r '.workflow_id' <<<"$run_json")" = "358294769"
+          test "$(jq -r '.name' <<<"$run_json")" = "One-off Fork Release"
+          test "$(jq -r '.path' <<<"$run_json")" = ".github/workflows/one-off-release.yml"
+          test "$(jq -r '.status' <<<"$run_json")" = "completed"
+          orphan_runs="$(gh api --paginate "repos/$GITHUB_REPOSITORY/actions/runs?per_page=100" --jq '.workflow_runs[] | select(.workflow_id == 358294769) | .id')"
+          if [ "$orphan_runs" != "34914073918" ]; then
+            echo "Unexpected orphan workflow run list: $orphan_runs"
+            exit 1
+          fi
+          echo 'Verified exactly one run belongs to the deleted workflow.'
+
+      - name: Delete orphaned workflow run
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh api --silent -X DELETE "repos/$GITHUB_REPOSITORY/actions/runs/34914073918"
+          echo 'Deleted obsolete workflow run 34914073918.'
+
+      - name: Remove temporary operational branch
+        shell: bash
+        run: |
+          set -euo pipefail
+          git push origin --delete chore/cleanup-legacy-action-2026-10-14
