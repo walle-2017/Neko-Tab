@@ -30,3 +30,90 @@ jobs:
 
       - name: Run Build
         run: npm run build
+
+  purge-pr-action-runs:
+    name: Purge all non-release Actions run history
+    if: github.head_ref == 'chore/purge-pr-action-runs-2026-10-14' && github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      actions: write
+      contents: write
+
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v5
+        with:
+          ref: main
+          fetch-depth: 1
+
+      - name: Audit and remove only old PR workflow runs
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f .github/workflows/build-check.yml
+          test -f .github/workflows/release.yml
+          mapfile -t entries < <(gh api --paginate "repos/$GITHUB_REPOSITORY/actions/runs?per_page=100" --jq '.workflow_runs[] | [.id, .workflow_id, .status] | @tsv')
+          release_count=0
+          obsolete_count=0
+          for entry in "${entries[@]}"; do
+            IFS=$'\t' read -r id workflow status <<< "$entry"
+            if [ "$workflow" = "357694783" ]; then
+              case "$id:$status" in
+                38496067175:completed|36369331508:completed) release_count=$((release_count + 1)) ;;
+                *) echo "Unrecognized release run: $entry"; exit 1 ;;
+              esac
+            elif [ "$workflow" = "357694781" ]; then
+              if [ "$id" = "$GITHUB_RUN_ID" ]; then
+                test "$status" = "in_progress" || test "$status" = "queued"
+              else
+                test "$status" = "completed" || { echo "Unfinished run $id, aborting"; exit 1; }
+                obsolete_count=$((obsolete_count + 1))
+              fi
+            else
+              echo "Unexpected workflow found: $entry"; exit 1
+            fi
+          done
+          test "$release_count" = "2"
+          test "$obsolete_count" = "104"
+          echo "Verified 2 protected releases and 104 completed PR runs to delete."
+          for entry in "${entries[@]}"; do
+            IFS=$'\t' read -r id workflow status <<< "$entry"
+            if [ "$workflow" = "357694781" ] && [ "$id" != "$GITHUB_RUN_ID" ]; then
+              gh api --silent -X DELETE "repos/$GITHUB_REPOSITORY/actions/runs/$id"
+              echo "Removed run $id"
+              sleep 0.2
+            fi
+          done
+          for id in 38496067175 36369331508; do
+            actual="$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$id" --jq .workflow_id)"
+            test "$actual" = "357694783"
+          done
+          mapfile -t remaining < <(gh api --paginate "repos/$GITHUB_REPOSITORY/actions/runs?per_page=100" --jq '.workflow_runs[].id')
+          for id in "${remaining[@]}"; do
+            case "$id" in
+              38496067175|36369331508|"$GITHUB_RUN_ID") ;;
+              *) echo "Unexpected remaining run: $id"; exit 1 ;;
+            esac
+          done
+          echo "Verified only the 2 official release runs and current cleanup run remain."
+
+      - name: Delete temporary operations branch
+        shell: bash
+        run: |
+          set -euo pipefail
+          git push origin --delete chore/purge-pr-action-runs-2026-10-14
+
+      - name: Attempt self-cleanup if permitted by GitHub
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if gh api --silent -X DELETE "repos/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"; then
+            echo "Current cleanup run deleted."
+          else
+            echo "GitHub disallowed deleting the in-progress cleanup run; this final run needs deletion after completion."
+          fi
